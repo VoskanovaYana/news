@@ -1,0 +1,2797 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Echo Journal — TheNewsAPI Pro</title>
+  <meta name="color-scheme" content="light dark" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {
+        fontFamily: { sans: ["Inter","ui-sans-serif","system-ui"], display:["Playfair Display","serif"] },
+        boxShadow: { soft: "0 20px 40px -20px rgb(0 0 0 / 0.25)" },
+        transitionTimingFunction: { smooth: 'cubic-bezier(.2,.7,.2,1)' }
+      }}
+    }
+  </script>
+  <style>
+    .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .skeleton { background: linear-gradient(90deg, rgba(0,0,0,.06) 25%, rgba(0,0,0,.12) 37%, rgba(0,0,0,.06) 63%); background-size: 400% 100%; animation: shimmer 1.2s ease-in-out infinite; }
+    @keyframes shimmer { 0% { background-position: 100% 0;} 100% { background-position: -100% 0; } }
+    .hover-actions { opacity: 0; transition: opacity .2s ease; }
+    article.group:hover .hover-actions { opacity: 1; }
+    html { scroll-behavior: smooth; }
+    dialog::backdrop { background: rgb(0 0 0 / .45); backdrop-filter: blur(2px); }
+    .chip { display:inline-flex; align-items:center; gap:.35rem; padding:.2rem .6rem; border-radius:999px; border:1px solid rgba(0,0,0,.12); }
+    .chip button { font-size:12px; opacity:.7 }
+  </style>
+<style>
+
+/* ==================== UI ENHANCEMENTS (UI-only, logic preserved) ==================== */
+:root{
+  --brand-accent: #f59e0b; /* warm amber */
+  --brand-accent-2: #ef4444; /* soft red */
+  --brand-elev: 16px;
+}
+/* Typography polish */
+body { font-feature-settings: "liga","kern"; }
+h1,h2,h3,h4 { letter-spacing: -0.01em; }
+.font-display { letter-spacing: -0.015em; }
+
+/* Header: subtle gradient + glass */
+header.sticky{
+  background: linear-gradient(180deg, rgba(255,255,255,.86), rgba(255,255,255,.74)) !important;
+}
+.dark header.sticky{
+  background: linear-gradient(180deg, rgba(9,9,11,.82), rgba(9,9,11,.68)) !important;
+}
+header .tab-link{
+  position: relative;
+  transition: transform .2s ease;
+}
+header .tab-link:hover{ transform: translateY(-1px); }
+header .tab-link.is-active::after{
+  content: "";
+  position: absolute;
+  left: 16px; right: 16px; bottom: 6px; height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--brand-accent), var(--brand-accent-2));
+}
+
+/* Search input glow */
+#searchInput:focus{
+  box-shadow: 0 0 0 4px rgba(245,158,11,.18);
+}
+
+/* Filter bar chips refinement */
+.chip{
+  background: rgba(255,255,255,.7);
+  backdrop-filter: blur(6px);
+}
+.dark .chip{
+  background: rgba(24,24,27,.6);
+}
+
+/* Cards: glossy, animated */
+article.group{
+  background: radial-gradient(1200px 220px at 50% -140px, rgba(245,158,11,.10), transparent) no-repeat,
+              rgba(255,255,255,.72);
+  backdrop-filter: blur(6px);
+  transition: transform .35s var(--tw-ease), box-shadow .35s var(--tw-ease), background .35s ease;
+}
+.dark article.group{
+  background: radial-gradient(1200px 220px at 50% -140px, rgba(239,68,68,.12), transparent) no-repeat,
+              rgba(24,24,27,.62);
+}
+article.group:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 24px 60px -24px rgba(0,0,0,.35);
+}
+
+/* Category pill upgraded */
+article.group .px-2{
+  box-shadow: 0 6px 16px -6px rgba(0,0,0,.35);
+}
+
+/* Featured hero: gentle parallax-ish feel */
+#featImg{
+  transform: scale(1.02);
+  transition: transform 700ms cubic-bezier(.2,.7,.2,1);
+  will-change: transform;
+}
+#featImg:hover{ transform: scale(1.06); }
+
+/* Keyword cloud: bubble sizing & hover */
+#keywordCloud button{
+  transition: transform .2s ease;
+}
+#keywordCloud button:hover{ transform: translateY(-2px); }
+
+/* Headlines premium lock: blur layer + centered CTA when empty handled by #headlinesEmpty */
+#headlinesEmpty{
+  background: linear-gradient(135deg, rgba(245,158,11,.09), rgba(239,68,68,.08));
+}
+#headlinesEmpty h4{ letter-spacing: -0.01em; }
+#secHeadlines .subscribe-btn{
+  display: inline-flex; align-items: center; gap:.5rem;
+  padding:.6rem 1rem; border-radius: 999px;
+  border:1px solid rgba(0,0,0,.14);
+  background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.72));
+}
+.dark #secHeadlines .subscribe-btn{
+  border-color: rgba(255,255,255,.14);
+  background: linear-gradient(180deg, rgba(24,24,27,.92), rgba(24,24,27,.72));
+}
+#secHeadlines .subscribe-btn:hover{
+  box-shadow: 0 12px 36px -18px rgba(0,0,0,.35);
+}
+
+/* Buttons: subtle lift + spinner alignment already present */
+button{
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+button:hover{ transform: translateY(-1px); }
+button:active{ transform: translateY(0); }
+
+/* Scroll-to-top button */
+#toTopBtn{
+  position: fixed; right: 18px; bottom: 18px; z-index: 90;
+  width: 44px; height: 44px; border-radius: 999px;
+  display: none; align-items: center; justify-content: center;
+  border: 1px solid rgba(0,0,0,.14);
+  background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.75));
+  box-shadow: 0 16px 40px -20px rgba(0,0,0,.4);
+}
+.dark #toTopBtn{
+  border-color: rgba(255,255,255,.14);
+  background: linear-gradient(180deg, rgba(24,24,27,.92), rgba(24,24,27,.75));
+}
+#toTopBtn.show{ display: flex; }
+#toTopBtn svg{ width: 18px; height: 18px; }
+
+</style>
+
+<style>
+/* --- Keyword Cloud visual selection --- */
+#keywordCloud .kw-selected{
+  border-color: var(--brand-accent) !important;
+  box-shadow: 0 8px 22px -12px rgba(245,158,11,.45);
+  outline: 0;
+  transform: translateY(-2px);
+}
+#keywordCloud .kw-selected::after{
+  content: "•";
+  margin-left: .35rem;
+  font-size: .9em;
+  color: var(--brand-accent-2);
+}
+</style>
+
+
+<style>
+/* ===== Section visual separation ===== */
+.section-card{
+  position: relative;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 1.25rem;
+  background: rgba(255,255,255,.78);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 24px 60px -30px rgba(0,0,0,.28);
+  margin-top: 1.25rem;
+  padding: 0.5rem 0 1rem 0;
+}
+.dark .section-card{
+  border-color: rgba(255,255,255,.10);
+  background: rgba(24,24,27,.60);
+  box-shadow: 0 24px 60px -34px rgba(0,0,0,.65);
+}
+/* Gradient accent line on top */
+.section-card::before{
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 6px;
+  border-top-left-radius: 1.25rem;
+  border-top-right-radius: 1.25rem;
+  background: linear-gradient(90deg, var(--brand-accent, #f59e0b), var(--brand-accent-2, #ef4444));
+  opacity: .85;
+}
+/* Breathing space for headers inside cards */
+.section-card > header{
+  padding-left: .75rem; padding-right: .75rem; padding-top: .25rem;
+}
+/* Keep grids aligned to card edges visually */
+.section-card .grid, .section-card #headlinesEmpty{
+  padding-left: .75rem; padding-right: .75rem;
+}
+/* Centered Load more alignment preserved */
+.section-card .mt-6.flex.justify-center{
+  padding-left: .75rem; padding-right: .75rem;
+}
+/* Extra spacing between stacked cards on small screens */
+@media (max-width: 640px){
+  .section-card{ margin-top: 1.5rem; }
+}
+</style>
+
+
+<style>
+/* === Align keyword container with news === */
+#secHeadlines .grid,
+#secTop .grid {
+  align-items: stretch; /* make both columns equal height */
+}
+#keywordCloudContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%; /* match news height */
+  background: rgba(24, 24, 27, 0.8); /* dark glass */
+  border-radius: 1rem;
+  padding: 1.25rem;
+}
+.dark #keywordCloudContainer {
+  background: rgba(39, 39, 42, 0.85);
+}
+#keywordCloudContainer h3 {
+  margin-bottom: 1rem;
+}
+#keywordCloud {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  align-content: flex-start;
+}
+#refreshCloud {
+  align-self: flex-end;
+  margin-top: 1rem;
+}
+</style>
+
+
+<style>
+/* === Ensure Featured section matches style === */
+#secRelated.section-card {
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 1.25rem;
+  background: rgba(255,255,255,.78);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 24px 60px -30px rgba(0,0,0,.28);
+  margin-top: 1.25rem;
+  padding: 0.5rem 0 1rem 0;
+}
+.dark #secRelated.section-card {
+  border-color: rgba(255,255,255,.10);
+  background: rgba(24,24,27,.60);
+  box-shadow: 0 24px 60px -34px rgba(0,0,0,.65);
+}
+#secRelated.section-card::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 6px;
+  border-top-left-radius: 1.25rem;
+  border-top-right-radius: 1.25rem;
+  background: linear-gradient(90deg, var(--brand-accent, #f59e0b), var(--brand-accent-2, #ef4444));
+  opacity: .85;
+}
+#secRelated.section-card > header {
+  padding-left: .75rem; padding-right: .75rem; padding-top: .25rem;
+}
+#secRelated.section-card .grid {
+  padding-left: .75rem; padding-right: .75rem;
+}
+</style>
+
+
+<style>
+/* ===== Phase 1 UI Polish ===== */
+
+/* Per-section gradient accents (animated) */
+@keyframes grad-move { 
+  0% { background-position: 0% 50%; } 
+  100% { background-position: 200% 50%; } 
+}
+.section-card::before{
+  background: linear-gradient(90deg, var(--sec-grad-a, var(--brand-accent, #f59e0b)), var(--sec-grad-b, var(--brand-accent-2, #ef4444)));
+  background-size: 200% 100%;
+  animation: grad-move 14s linear infinite;
+}
+/* Assign unique gradients per section */
+#secHeadlines{ --sec-grad-a:#f59e0b; --sec-grad-b:#ef4444; }   /* amber -> red */
+#secTop{        --sec-grad-a:#0ea5e9; --sec-grad-b:#1d4ed8; }   /* sky -> blue */
+#secAll{        --sec-grad-a:#10b981; --sec-grad-b:#84cc16; }   /* emerald -> lime */
+#secRelated{    --sec-grad-a:#f43f5e; --sec-grad-b:#8b5cf6; }   /* rose -> violet */
+#secSaved{      --sec-grad-a:#6366f1; --sec-grad-b:#a855f7; }   /* indigo -> fuchsia */
+
+/* Active nav underline (animated) */
+header .tab-link{
+  position: relative;
+  transition: transform .18s ease, color .18s ease;
+}
+header .tab-link::after{
+  content:"";
+  position:absolute; left:16px; right:16px; bottom:6px; height:2px;
+  border-radius:999px; background: transparent;
+  transform: scaleX(0); transform-origin: left;
+  transition: transform .25s ease, background .25s ease;
+}
+header .tab-link.is-active{ color: var(--sec-active, inherit); }
+header .tab-link.is-active::after{
+  background: linear-gradient(90deg, var(--brand-accent,#f59e0b), var(--brand-accent-2,#ef4444));
+  transform: scaleX(1);
+}
+
+/* Card hover: lift + image zoom */
+article.group{
+  transition: transform .28s ease, box-shadow .28s ease;
+}
+article.group:hover{ transform: translateY(-4px); box-shadow: 0 30px 70px -34px rgba(0,0,0,.45); }
+article.group img{ transition: transform .6s cubic-bezier(.2,.7,.2,1); will-change: transform; }
+article.group:hover img{ transform: scale(1.05); }
+
+/* Keyword glow */
+#keywordCloud button{ transition: transform .18s ease, box-shadow .18s ease; }
+#keywordCloud button:hover{ transform: translateY(-2px); box-shadow: 0 10px 26px -16px rgba(245,158,11,.5); }
+#keywordCloud .kw-selected{ box-shadow: 0 12px 28px -16px rgba(245,158,11,.55); }
+</style>
+
+
+<style>
+/* ===== Delight Pack Additions ===== */
+
+/* 1) Premium glass header */
+header.sticky {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(255,255,255,0.65)) !important;
+}
+.dark header.sticky {
+  background: linear-gradient(180deg, rgba(9,9,11,0.82), rgba(9,9,11,0.62)) !important;
+}
+
+/* 2) Scroll progress bar */
+#scrollProgress {
+  position: fixed;
+  top: 0; left: 0; height: 3px; width: 0%;
+  z-index: 60;
+  background: linear-gradient(90deg, var(--brand-accent,#f59e0b), var(--brand-accent-2,#ef4444));
+  box-shadow: 0 6px 20px -8px rgba(0,0,0,.4);
+  transition: width .08s linear;
+}
+
+/* 3) Card reflection overlay for extra polish */
+article.group {
+  position: relative;
+  overflow: hidden;
+}
+article.group::after {
+  content:"";
+  position:absolute; left:-40%; top:-60%;
+  width: 60%; height: 220%;
+  transform: rotate(25deg);
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0));
+  transition: transform .6s ease, opacity .4s ease;
+  opacity: .6;
+}
+article.group:hover::after {
+  transform: rotate(25deg) translateX(40%);
+  opacity: .85;
+}
+
+/* 4) Hero/Featured parallax helpers */
+.parallax {
+  will-change: transform;
+  transform: translateY(0) scale(1.02);
+  transition: transform 800ms cubic-bezier(.2,.7,.2,1);
+}
+.parallax:hover { transform: translateY(0) scale(1.06); }
+
+/* CTA button overlay style */
+.cta-readmore {
+  display:inline-flex; align-items:center; gap:.5rem;
+  padding:.6rem 1rem; border-radius:999px;
+  border:1px solid rgba(0,0,0,.14);
+  background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.75));
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+}
+.cta-readmore:hover { box-shadow: 0 14px 36px -18px rgba(0,0,0,.35); transform: translateY(-1px); }
+.dark .cta-readmore {
+  border-color: rgba(255,255,255,.14);
+  background: linear-gradient(180deg, rgba(24,24,27,.92), rgba(24,24,27,.72));
+}
+
+/* 5) Minor polish: slightly stronger shadow on section-cards on hover */
+.section-card:hover { box-shadow: 0 28px 80px -36px rgba(0,0,0,.45); }
+</style>
+
+
+<style>
+
+<style>
+/* ===== Calm Keyword Section ===== */
+#keywordCloudContainer {
+  border-radius: 1rem;
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(10px);
+  padding: 1rem 1.25rem;
+}
+.dark #keywordCloudContainer {
+  background: rgba(24,24,27,0.75);
+}
+#keywordCloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  justify-content: flex-start;
+}
+.kw-bubble {
+  display:inline-flex; align-items:center; justify-content:center;
+  border-radius: 9999px;
+  padding: .45rem .9rem;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  transition: all .2s ease;
+  opacity: 0.85;
+}
+.dark .kw-bubble {
+  color: #e5e7eb;
+  background: rgba(39,39,42,0.7);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+.kw-bubble:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px -10px rgba(0,0,0,0.2);
+  opacity: 1;
+}
+.kw-selected {
+  border-color: var(--brand-accent,#14b8a6);
+  background: rgba(20,184,166,0.12);
+  box-shadow: 0 0 0 2px rgba(20,184,166,0.35);
+  opacity: 1;
+}
+</style>
+
+
+
+<style>
+/* ===== Phase 2 Visual Depth Pack ===== */
+
+/* 1) Layered background for depth */
+body::before{
+  content:"";
+  position: fixed; inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(600px 400px at 12% 18%, rgba(20,184,166,.10), transparent 60%),
+    radial-gradient(700px 500px at 86% 78%, rgba(139,92,246,.08), transparent 70%);
+  pointer-events: none;
+}
+
+/* 3) Card accent stripe (left) using --cat-color */
+article.group{
+  position: relative;
+}
+article.group::before{
+  content:"";
+  position:absolute; left:0; top:0; bottom:0; width:3px;
+  border-top-left-radius: 12px; border-bottom-left-radius: 12px;
+  background: var(--cat-color, rgba(0,0,0,.12));
+  opacity:.85;
+}
+
+/* 4) Dynamic font scaling for card titles */
+article.group a.font-display{
+  font-size: clamp(1.05rem, 1.2vw + 0.6rem, 1.5rem);
+  letter-spacing: -0.015em;
+}
+
+/* 5) Smart visual chips dock */
+#chipsDock{
+  position: static; top: 56px; z-index: 12;
+  display: flex; gap: .5rem; align-items: center; flex-wrap: wrap;
+  padding: .5rem .75rem; margin: .5rem 0 0;
+}
+#chipsDock .chip{
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .35rem .7rem; border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.08);
+  background: rgba(255,255,255,.8);
+  backdrop-filter: blur(6px);
+  font-size: .85rem;
+}
+#chipsDock .chip button{
+  border: none; background: transparent; cursor: pointer;
+  line-height: 1; font-size: 1rem; opacity:.7;
+}
+.dark #chipsDock .chip{
+  border-color: rgba(255,255,255,.10);
+  background: rgba(39,39,42,.75);
+}
+</style>
+
+
+<style>
+/* Published range hybrid UI */
+#publishedHybrid .chip.small{
+  padding: .25rem .6rem; border-radius: 999px; border:1px solid rgba(0,0,0,.08);
+  background: rgba(255,255,255,.8); font-size: .8rem;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.dark #publishedHybrid .chip.small{
+  border-color: rgba(255,255,255,.10); background: rgba(39,39,42,.75);
+}
+#publishedHybrid .chip.small:hover{ transform: translateY(-1px); box-shadow: 0 8px 18px -12px rgba(0,0,0,.25); }
+#publishedHybrid .chip.small.active{
+  border-color: rgba(20,184,166,.5);
+  box-shadow: 0 0 0 2px rgba(20,184,166,.25);
+  background: rgba(20,184,166,.10);
+}
+</style>
+
+
+<style>
+/* ===== Toast Notifications ===== */
+#toastStack{
+  position: fixed; right: 18px; bottom: 18px; z-index: 1000;
+  display: flex; flex-direction: column; gap: .5rem; align-items: flex-end;
+  pointer-events: none;
+}
+.toast{
+  pointer-events: auto;
+  display: flex; align-items: center; gap: .6rem;
+  max-width: 320px;
+  padding: .6rem .85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,.08);
+  background: rgba(255,255,255,.9);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 18px 50px -24px rgba(0,0,0,.35);
+  font-size: .925rem;
+  transform: translateY(10px);
+  opacity: 0;
+  transition: transform .25s ease, opacity .25s ease;
+}
+.toast.show{ transform: translateY(0); opacity: 1; }
+.toast .toast-icon{ font-size: 1.1rem; }
+.toast.success{ border-color: rgba(16,185,129,.35); }
+.toast.info{ border-color: rgba(59,130,246,.35); }
+.toast.warn{ border-color: rgba(245,158,11,.45); }
+.toast.error{ border-color: rgba(239,68,68,.4); }
+.dark .toast{
+  background: rgba(24,24,27,.9);
+  border-color: rgba(255,255,255,.12);
+}
+</style>
+<div id="toastStack" aria-live="polite" aria-atomic="true"></div>
+
+
+<style>
+/* ===== Spacing & Density ===== */
+.section-card{
+  margin-top: 1.75rem !important;
+  padding-top: .75rem !important;
+  padding-bottom: 1.25rem !important;
+}
+.section-card .grid{
+  padding-left: .75rem; padding-right: .75rem;
+}
+/* Filter pills spacing (top filters bar) */
+section[aria-label="Filters"], /* fallback if present */
+section.sticky.top-\[64px\] .flex.items-center.gap-3{
+  row-gap: .5rem;
+  column-gap: .75rem;
+}
+/* Ensure small chips have a bit more air */
+.chip, #publishedHybrid .chip.small{ margin-right: .15rem; }
+#publishedHybrid{ gap: .6rem; }
+
+/* Card inner padding normalization */
+article.group > div.p-4{ padding: 1.1rem !important; }
+@media (min-width: 1024px){
+  article.group > div.p-4{ padding: 1.15rem !important; }
+}
+
+/* ===== Saved Reading Progress UI ===== */
+.saved-progress{
+  height: 6px; width: 100%;
+  background: rgba(0,0,0,.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.dark .saved-progress{ background: rgba(255,255,255,.12); }
+.saved-progress > span{
+  display:block; height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--brand-accent,#14b8a6), var(--brand-accent-2,#8b5cf6));
+  transition: width .25s ease;
+}
+.saved-meta{
+  display:flex; align-items:center; justify-content:space-between; gap:.75rem;
+  margin-top: .5rem;
+}
+.saved-meta .read-state{
+  font-size: .8rem; opacity: .8;
+}
+.saved-actions{
+  display:flex; align-items:center; gap:.5rem;
+}
+button.btn-read{
+  padding: .35rem .65rem; border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.12);
+  background: rgba(255,255,255,.8);
+  font-size: .8rem;
+}
+.dark button.btn-read{
+  border-color: rgba(255,255,255,.14);
+  background: rgba(39,39,42,.75);
+}
+button.btn-read:hover{ box-shadow: 0 10px 24px -14px rgba(0,0,0,.3); transform: translateY(-1px); }
+</style>
+
+
+<style>
+/* ===== Calm+ UI Pack ===== */
+
+/* 1) Calmer, editorial section headings with mono underline */
+.section-card > header h3{
+  display:inline-block;
+  font-size:clamp(1.4rem,1.6vw,1.9rem);
+  font-weight:800;
+  letter-spacing:-.015em;
+  color: inherit;
+  position:relative;
+}
+.section-card > header h3::after{
+  content:"";
+  display:block;
+  height:2px; width:0;
+  background: currentColor;
+  opacity:.5;
+  transition: width .25s ease;
+  border-radius:999px;
+}
+.section-card > header h3:hover::after{ width:100%; }
+
+/* 2) Background depth via very subtle noise + soft gradients */
+body::before{
+  content:""; position:fixed; inset:0; z-index:-2;
+  background:
+    radial-gradient(600px 400px at 12% 18%, rgba(20,184,166,.06), transparent 60%),
+    radial-gradient(700px 500px at 86% 78%, rgba(139,92,246,.05), transparent 70%);
+  pointer-events:none;
+}
+body::after{
+  content:""; position:fixed; inset:0; z-index:-1;
+  background-image:
+    radial-gradient(rgba(0,0,0,.015) 1px, transparent 1px),
+    radial-gradient(rgba(0,0,0,.01) 1px, transparent 1px);
+  background-size: 12px 12px, 24px 24px;
+  background-position: 0 0, 12px 12px;
+  pointer-events:none;
+  opacity:.7;
+}
+
+/* 3) Card tooltip (source • time) */
+.card-tip{
+  position:absolute; left:12px; bottom:12px;
+  transform: translateY(6px);
+  background: rgba(0,0,0,.72);
+  color: #fff;
+  border-radius: 10px;
+  padding: .3rem .5rem;
+  font-size: .75rem;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity .2s ease, transform .2s ease;
+  pointer-events: none;
+  box-shadow: 0 10px 26px -14px rgba(0,0,0,.45);
+}
+.dark .card-tip{ background: rgba(15,15,20,.85); }
+article.group:hover .card-tip{ opacity:1; transform: translateY(0); }
+
+/* 4) Focus ring across interactive elements */
+:focus-visible{
+  outline: 2px solid rgba(20,184,166,.6);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+/* 5) Reduced motion support */
+@media (prefers-reduced-motion:reduce){
+  *{
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* 6) Keyword sizing & overflow control (calm) */
+#keywordCloud{
+  max-height: 340px;
+  overflow: auto;
+  padding-right: .25rem;
+}
+.kw-bubble{
+  font-size: 13px;
+  padding: .4rem .75rem;
+}
+
+/* 7) Chip spacing polish */
+.chip{ margin-right: .25rem; margin-bottom: .25rem; }
+
+/* 8) Slightly softer category accent stripe */
+article.group::before{ opacity: .6; }
+</style>
+
+</head>
+<body class="h-full bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+<div id="app" class="min-h-screen flex flex-col">
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-50 backdrop-blur bg-white/80 dark:bg-zinc-950/70 border-b border-zinc-200/70 dark:border-zinc-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center gap-4 py-4">
+        <button id="themeBtn" class="rounded-xl px-3 py-2 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800" aria-label="Toggle dark mode">🌓</button>
+        <a class="flex items-end gap-2" href="#">
+          <span class="text-2xl font-black tracking-tight">ECHO</span>
+          <span class="text-2xl font-black text-zinc-600">JOURNAL</span>
+        </a>
+
+        <!-- NAV TABS -->
+        <nav class="hidden md:flex items-center gap-1 ml-4">
+          <a href="#secRelated" class="tab-link px-4 py-2 rounded-full font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800">Featured</a>
+
+          <a href="#secHeadlines" class="tab-link px-4 py-2 rounded-full font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800">Headlines</a>
+          <a href="#secTop" class="tab-link px-4 py-2 rounded-full font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800">Top</a>
+          <a href="#secAll" class="tab-link px-4 py-2 rounded-full font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800">All</a>
+          <a href="#secSaved" class="tab-link px-4 py-2 rounded-full font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800">Saved</a>
+        </nav>
+
+        <div class="flex-1"></div>
+
+        <div class="hidden md:flex items-center gap-2"><button id="btnSources" class="px-3 py-2 rounded-full border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm">Pick sources</button> <input id="searchInput" type="search" placeholder="Search news" class="w-80 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/60 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-zinc-400" /></div>
+      </div>
+    </div>
+      </header>
+
+<!-- Visual chips dock (no logic) -->
+<div id="chipsDock" aria-live="polite" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"></div>
+
+
+  <!-- FILTERS BAR -->
+  <section class="sticky top-[64px] z-40 backdrop-blur bg-zinc-100/85 dark:bg-zinc-900/75 border-b border-zinc-200/70 dark:border-zinc-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <div class="flex items-center gap-3 flex-wrap">
+
+        
+<!-- Published (Hybrid Range + Quick Chips) -->
+<div id="publishedHybrid" class="flex items-center gap-3 flex-wrap rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700 px-4 py-2 shadow-sm">
+  <label class="text-sm text-zinc-600 dark:text-zinc-300">Published</label>
+  <input id="publishedRange" type="text" placeholder="Select range" 
+         class="rounded-full px-3 py-1.5 text-sm bg-white/70 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-teal-400" />
+  <div class="flex items-center gap-2 ml-1">
+    <button class="chip small" data-chip="today">Today</button>
+    <button class="chip small" data-chip="week">This Week</button>
+    <button class="chip small" data-chip="month">This Month</button>
+    <button class="chip small" data-chip="custom">Custom 📅</button>
+  </div>
+</div>
+
+
+  <!-- Published On -->
+        <label class="hidden" class="flex items-center gap-2 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700 px-4 py-2 shadow-sm">
+          <span class="text-sm">Published On</span>
+          <input id="publishedOn" type="date" class="text-sm bg-transparent outline-none" />
+        </label>
+
+        <!-- Published Period (range) -->
+        <div class="hidden" class="rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700 px-4 py-2 shadow-sm flex items-center gap-2">
+          <span class="text-sm">Published Period</span>
+          <input id="publishedAfter" type="date" class="text-sm bg-transparent outline-none" title="Start date (published_after)" />
+          <span class="opacity-60 text-sm">—</span>
+          <input id="publishedBefore" type="date" class="text-sm bg-transparent outline-none" title="End date (published_before)" />
+          <button id="clearPeriod" class="ml-2 text-xs px-2 py-1 rounded-full border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Clear</button>
+        </div>
+
+        <!-- Categories -->
+        <div class="rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700 px-4 py-2 shadow-sm">
+          <label for="categoryFilter" class="text-sm mr-2">Categories</label>
+          <select id="categoryFilter" class="text-sm bg-transparent outline-none">
+            <option value="">All</option>
+            <option>general</option><option>science</option><option>sports</option>
+            <option>business</option><option>health</option><option>entertainment</option>
+            <option>tech</option><option>politics</option><option>food</option><option>travel</option>
+          </select>
+        </div>
+
+        <!-- Exclude Categories (hidden) -->
+        <div class="hidden rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700 px-4 py-2 shadow-sm">
+          <label class="text-sm mr-2">Exclude Categories</label>
+          <select multiple id="excludeCategories" class="text-sm bg-transparent outline-none min-w-[10rem] h-9">
+            <option>general</option><option>science</option><option>sports</option>
+            <option>business</option><option>health</option><option>entertainment</option>
+            <option>tech</option><option>politics</option><option>food</option><option>travel</option>
+          </select>
+        </div>
+
+        <!-- Sort (in Filters) -->
+        <div class="rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700 px-4 py-2 shadow-sm">
+          <label for="sortSelect" class="text-sm mr-2">Sort</label>
+          <select id="sortSelect" class="text-sm bg-transparent outline-none">
+            <option value="">Latest</option>
+            <option value="relevance_score">Relevance (with search)</option>
+            <option value="published_on">Published date</option>
+          </select>
+        </div>
+
+        <!-- Search Fields (hidden) -->
+        <div class="hidden rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700 px-4 py-2 shadow-sm">
+          <span class="text-sm mr-2">Search fields</span>
+          <label class="text-xs mr-2"><input type="checkbox" class="sf" value="title" checked> title</label>
+          <label class="text-xs mr-2"><input type="checkbox" class="sf" value="main_text" checked> main_text</label>
+          <label class="text-xs mr-2"><input type="checkbox" class="sf" value="description"> description</label>
+          <label class="text-xs"><input type="checkbox" class="sf" value="keywords"> keywords</label>
+        </div>
+
+        <!-- Locale -->
+        <div class="rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700 px-4 py-2 shadow-sm">
+          <label for="localeFilter" class="text-sm mr-2">Locale</label>
+          <select id="localeFilter" class="text-sm bg-transparent outline-none">
+            <option value="">All</option>
+            <option>ar</option><option>am</option><option>au</option><option>at</option><option>by</option><option>be</option>
+            <option>bo</option><option>br</option><option>bg</option><option>ca</option><option>cl</option><option>cn</option>
+            <option>co</option><option>hr</option><option>cz</option><option>ec</option><option>eg</option><option>fr</option>
+            <option>de</option><option>gr</option><option>hn</option><option>hk</option><option>in</option><option>id</option>
+            <option>ir</option><option>ie</option><option>il</option><option>it</option><option>jp</option><option>kr</option>
+            <option>mx</option><option>nl</option><option>nz</option><option>ni</option><option>pk</option><option>pa</option>
+            <option>pe</option><option>pl</option><option>pt</option><option>qa</option><option>ro</option><option>ru</option>
+            <option>sa</option><option>za</option><option>es</option><option>ch</option><option>sy</option><option>tw</option>
+            <option>th</option><option>tr</option><option>ua</option><option>gb</option><option>us</option><option>uy</option>
+            <option>ve</option>
+          </select>
+        </div>
+
+        <!-- Language -->
+        <div class="rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700 px-4 py-2 shadow-sm">
+          <label for="languageFilter" class="text-sm mr-2">Language</label>
+          <select id="languageFilter" class="text-sm bg-transparent outline-none">
+            <option value="">All</option>
+            <option>ar</option><option>bg</option><option>bn</option><option>cs</option><option>da</option><option>de</option>
+            <option>el</option><option>en</option><option>es</option><option>et</option><option>fa</option><option>fi</option>
+            <option>fr</option><option>he</option><option>hi</option><option>hr</option><option>hu</option><option>id</option>
+            <option>it</option><option>ja</option><option>ko</option><option>lt</option><option>multi</option><option>nl</option>
+            <option>no</option><option>pl</option><option>pt</option><option>ro</option><option>ru</option><option>sk</option>
+            <option>sv</option><option>ta</option><option>th</option><option>tr</option><option>uk</option><option>vi</option>
+            <option>zh</option>
+          </select>
+        </div>
+
+        <!-- Domains / Sources -->
+        <div class="rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700 px-4 py-2 shadow-sm flex items-center gap-2">
+          <div id="chips" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <div class="flex-1"></div>
+
+        <!-- Reset -->
+        <button id="resetFilters" class="rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700 px-4 py-2 shadow-sm text-sm flex items-center gap-2">
+          <span>Reset filters</span><span aria-hidden="true">↻</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATUS BAR -->
+  <section id="statusBar" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 text-sm text-zinc-700 dark:text-zinc-300"></section>
+
+  <!-- MAIN -->
+  <main class="flex-1">
+    <!-- Featured + Keyword Cloud -->
+    <section class="relative overflow-hidden">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid lg:grid-cols-12 gap-6 items-start">
+        <div class="lg:col-span-8">
+          <a id="featLink" target="_blank" rel="noopener" class="block group rounded-3xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-soft">
+            <div class="relative h-80 sm:h-[28rem] bg-zinc-200 dark:bg-zinc-800">
+              <img id="featImg" alt="" class="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 ease-smooth"/>
+              <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0"></div>
+              <div class="absolute left-6 right-6 bottom-6 text-white">
+                <div class="flex items-center gap-3 text-xs opacity-90">
+                  <span id="featSource"></span><span>•</span><span id="featTime"></span><span>•</span><span id="featLang"></span>
+                </div>
+                <h2 id="featTitle" class="mt-2 font-display text-3xl sm:text-4xl leading-tight"></h2>
+              </div>
+            </div>
+          </a>
+
+          <!-- Featured -->
+          <section id="secRelated" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 section-card mt-6 hidden">
+            <header class="flex items-end justify-between mb-3">
+              <h3 class="text-lg font-semibold">Featured</h3>
+              <div class="flex items-center gap-3">
+                <span id="metaRelated" class="text-xs text-zinc-500"></span>
+                <button id="loadMoreRelated" class="px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Load more</button>
+              </div>
+      </header>
+            <div id="relatedGrid" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"></div>
+          </section>
+        </div>
+
+        <aside class="lg:col-span-4">
+          <div class="sticky top-[128px] rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/60 p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-lg font-semibold">Keywords</h3>
+              <button id="refreshCloud" class="text-xs px-2 py-1 rounded-full border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Refresh</button>
+            </div>
+            <div id="keywordCloud" class="flex flex-wrap gap-2"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Headlines -->
+    <section id="secHeadlines" class="section-card max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+      <header class="flex items-end justify-between mb-6">
+        <div>
+          <h3 class="text-xl font-semibold">Headlines</h3>
+          <p class="text-xs text-zinc-500">Requires Standard plan or above.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="text-sm">Per category
+            <input id="headlinesPerCat" type="number" min="1" max="20" step="1" value="6" class="ml-2 w-16 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent px-2 py-1 text-sm">
+          </label>
+          <label class="text-sm">Include similar
+            <input id="headlinesIncludeSimilar" type="checkbox" checked class="ml-1 align-middle">
+          </label>
+          <span id="metaHeadlines" class="text-xs text-zinc-500"></span>
+          <button id="loadMoreHeadlines" class="px-4 py-2 rounded-full border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Load more</button>
+        </div>
+      </header>
+      <div id="headlinesGrid" class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"></div>
+      <div id="headlinesEmpty" class="hidden rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-8 flex items-center gap-4">
+        <div class="text-3xl">🔒</div>
+        <div>
+          <h4 class="text-lg font-semibold mb-1">Headlines are unavailable</h4>
+          <p class="text-sm text-zinc-600 dark:text-zinc-400">Subscription to Standard plan is needed.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Top -->
+    <section id="secTop" class="section-card max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+      <header class="flex items-end justify-between mb-6">
+        <h3 class="text-xl font-semibold">Top Stories</h3>
+        <div class="flex items-center gap-3">
+          <span id="metaTop" class="text-xs text-zinc-500"></span>
+          
+        </div>
+      </header>
+      <div id="topGrid" class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"></div>
+      <div class="mt-6 flex justify-center">
+        <button id="loadMoreTop2" class="px-4 py-2 rounded-full border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Load more</button>
+      </div>
+    </section>
+
+    <!-- All -->
+    <section id="secAll" class="section-card max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+      <header class="flex items-end justify-between mb-6">
+        <h3 class="text-xl font-semibold">All</h3>
+        <div class="flex items-center gap-3">
+          <span id="metaAll" class="text-xs text-zinc-500"></span>
+          
+        </div>
+      </header>
+      <div id="allGrid" class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"></div>
+      <div class="mt-6 flex justify-center">
+        <button id="loadMoreAll2" class="px-4 py-2 rounded-full border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Load more</button>
+      </div>
+    </section>
+
+    <!-- Saved -->
+    <section id="secSaved" class="section-card max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
+      <header class="flex items-end justify-between mb-6">
+        <h3 class="text-xl font-semibold">Saved</h3>
+      </header>
+      <div id="savedGrid" class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"></div>
+      <div id="savedEmpty" class="flex flex-col items-center justify-center rounded-3xl border border-dashed border-zinc-300 dark:border-zinc-700 p-10 text-center text-zinc-600 dark:text-zinc-300">
+        <div class="text-6xl mb-3">🔖</div>
+        <h4 class="text-lg font-semibold mb-1">Nothing saved yet</h4>
+        <p class="mb-4">Click “Save” on a story to collect it here. You can also search or pick a keyword from the cloud.</p>
+        <div class="flex items-center gap-2">
+          <a href="#secTop" class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Browse Top</a>
+          <a href="#secAll" class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">See All News</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-zinc-200 dark:border-zinc-800 py-8 text-sm text-zinc-500 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center gap-3 justify-between">
+      <p>Data by <a class="underline hover:no-underline" href="https://www.thenewsapi.com/" target="_blank" rel="noopener">TheNewsAPI</a>.</p>
+      <p id="quota" class="text-xs"></p>
+    </div>
+  </footer>
+
+</div>
+
+<!-- Sources Picker Modal -->
+<dialog id="sourcesDlg" class="rounded-2xl p-0 w-[min(48rem,calc(100%-2rem))]">
+  <div class="p-5 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 rounded-t-2xl">
+    <div class="flex items-center justify-between">
+      <h3 class="text-lg font-semibold">Pick sources &amp; domains</h3>
+      <button id="closeDlg" class="rounded-full px-2 py-1 border border-zinc-300 dark:border-zinc-700">✕</button>
+    </div>
+  </div>
+  <div class="p-5 space-y-3 bg-white dark:bg-zinc-950 max-h-[70vh] overflow-auto">
+    <div class="flex gap-3 items-end flex-wrap">
+      <label class="text-sm">Search
+        <input id="srcSearch" type="text" class="ml-2 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent px-2 py-1 text-sm">
+      </label>
+      <label class="text-sm">Category
+        <select id="srcCat" class="ml-2 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent px-2 py-1 text-sm">
+          <option value="">Any</option>
+          <option>general</option><option>science</option><option>sports</option>
+          <option>business</option><option>health</option><option>entertainment</option>
+          <option>tech</option><option>politics</option><option>food</option><option>travel</option>
+        </select>
+      </label>
+      <label class="text-sm">Language
+        <select id="srcLang" class="ml-2 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent px-2 py-1 text-sm">
+          <option value="">Any</option>
+          <option>ar</option><option>bg</option><option>bn</option><option>cs</option><option>da</option><option>de</option>
+          <option>el</option><option>en</option><option>es</option><option>et</option><option>fa</option><option>fi</option>
+          <option>fr</option><option>he</option><option>hi</option><option>hr</option><option>hu</option><option>id</option>
+          <option>it</option><option>ja</option><option>ko</option><option>lt</option><option>multi</option><option>nl</option>
+          <option>no</option><option>pl</option><option>pt</option><option>ro</option><option>ru</option><option>sk</option>
+          <option>sv</option><option>ta</option><option>th</option><option>tr</option><option>uk</option><option>vi</option>
+          <option>zh</option>
+        </select>
+      </label>
+      <label class="text-sm">Locale
+        <select id="srcLoc" class="ml-2 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent px-2 py-1 text-sm">
+          <option value="">Any</option>
+          <option>ar</option><option>am</option><option>au</option><option>at</option><option>by</option><option>be</option>
+          <option>bo</option><option>br</option><option>bg</option><option>ca</option><option>cl</option><option>cn</option>
+          <option>co</option><option>hr</option><option>cz</option><option>ec</option><option>eg</option><option>fr</option>
+          <option>de</option><option>gr</option><option>hn</option><option>hk</option><option>in</option><option>id</option>
+          <option>ir</option><option>ie</option><option>il</option><option>it</option><option>jp</option><option>kr</option>
+          <option>mx</option><option>nl</option><option>nz</option><option>ni</option><option>pk</option><option>pa</option>
+          <option>pe</option><option>pl</option><option>pt</option><option>qa</option><option>ro</option><option>ru</option>
+          <option>sa</option><option>za</option><option>es</option><option>ch</option><option>sy</option><option>tw</option>
+          <option>th</option><option>tr</option><option>ua</option><option>gb</option><option>us</option><option>uy</option>
+          <option>ve</option>
+        </select>
+      </label>
+      <button id="srcRefresh" class="text-sm px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Search</button>
+    </div>
+    <div id="srcList" class="grid md:grid-cols-2 gap-3"></div>
+    <div class="flex items-center justify-between pt-2">
+      <div><span id="srcMeta" class="text-xs text-zinc-500"></span></div>
+      <div class="space-x-2">
+        <button id="srcPrev" class="text-sm px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700">Prev</button>
+        <button id="srcNext" class="text-sm px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700">Next</button>
+      </div>
+    </div>
+  </div>
+  <div class="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 rounded-b-2xl flex justify-end gap-2">
+    <button id="applySources" class="px-4 py-2 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950">Apply</button>
+  </div>
+</dialog>
+
+<script>
+/* ======================== CONFIG ======================== */
+const API_BASE = 'https://api.thenewsapi.com/v1';
+const URL_QS = new URL(location.href).searchParams;
+const URL_TOKEN = URL_QS.get('api_token');
+const URL_UUID = URL_QS.get('uuid');
+const API_TOKEN = URL_TOKEN || 'F1NegV7Iw9QXmddsUd5JPMu0Z8a6qmAJbAhdcs3h';
+
+const ENDPOINTS = {
+  headlines: `${API_BASE}/news/headlines`,
+  top: `${API_BASE}/news/top`,
+  all: `${API_BASE}/news/all`,
+  similar: (uuid) => `${API_BASE}/news/similar/${uuid}`,
+  sources: `${API_BASE}/news/sources`,
+  uuid: (uuid) => `${API_BASE}/news/uuid/${uuid}`
+};
+
+const PAGE_SIZE = 24;
+const MAX_RESULTS_WINDOW = 20000;
+
+/* ======================== STATE ======================== */
+const state = {
+  headlines: { page: 1, items: [], loading: false, done: false },
+  top: { page: 1, items: [], loading: false, done: false },
+  all: { page: 1, items: [], loading: false, done: false },
+  related: { uuid: '', page: 1, items: [], loading: false, done: false },
+  saved: loadSaved(),
+  filters: {
+    search: '',
+    search_fields: ['title','main_text'],
+    categories: '',
+    exclude_categories: [],
+    locale: '',
+    language: '',
+    published_on: '',
+    published_after: '',
+    published_before: '',
+    sort: '',
+    domains: [],
+    exclude_domains: [],
+    source_ids: [],
+    exclude_source_ids: [],
+    headlines_per_category: 6,
+    include_similar: true
+  },
+  theme: (localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')),
+  quota: {}
+};
+
+/* ======================== HELPERS ======================== */
+const $ = sel => document.querySelector(sel);
+function setStatus(msg){ const bar = $('#statusBar'); if(!msg){ bar.classList.add('hidden'); bar.textContent=''; } else { bar.textContent = msg; bar.classList.remove('hidden'); } }
+function escapeHTML(s){ return (s||'').replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+function timeAgo(iso){
+  try {
+    const dt = new Date(iso);
+    const rtf = new Intl.RelativeTimeFormat(navigator.language || 'en', { numeric:'auto' });
+    const diffSec = Math.floor((dt - new Date())/1000);
+    const abs = Math.abs(diffSec);
+    if(abs < 60) return rtf.format(Math.round(diffSec), 'seconds');
+    const mins = Math.round(diffSec/60); if(Math.abs(mins) < 60) return rtf.format(mins, 'minutes');
+    const hrs = Math.round(mins/60); if(Math.abs(hrs) < 24) return rtf.format(hrs, 'hours');
+    const days = Math.round(hrs/24); return rtf.format(days, 'days');
+  } catch { return new Date(iso).toLocaleString(); }
+}
+function buildURL(base, params){
+  const u = new URL(typeof base === 'string' ? base : base());
+  u.searchParams.set('api_token', API_TOKEN);
+  const set = (k,v)=>{ if(v==null || v==='' || (Array.isArray(v)&&v.length===0)) return; u.searchParams.set(k, Array.isArray(v)? v.join(','): v); };
+  set('search', params?.search);
+  set('search_fields', params?.search_fields);
+  set('categories', params?.categories);
+  set('exclude_categories', params?.exclude_categories);
+  set('locale', params?.locale);
+  set('language', params?.language);
+  set('published_on', params?.published_on);
+  set('published_after', params?.published_after);
+  set('published_before', params?.published_before);
+  set('sort', params?.sort);
+  set('domains', params?.domains);
+  set('exclude_domains', params?.exclude_domains);
+  set('source_ids', params?.source_ids);
+  set('exclude_source_ids', params?.exclude_source_ids);
+  set('headlines_per_category', params?.headlines_per_category);
+  set('include_similar', params?.include_similar);
+  if(params?.limit != null) u.searchParams.set('limit', params.limit);
+  if(params?.page != null) u.searchParams.set('page', params.page);
+  return u.toString();
+}
+function imageTag(src, alt=''){
+  if(!src) return `<div class="h-48 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-400">📰</div>`;
+  return `<img loading="lazy" src="${src}" alt="${escapeHTML(alt)}" class="h-48 w-full object-cover rounded-2xl group-hover:scale-[1.03] transition-transform duration-500 ease-smooth" onerror="this.parentElement.innerHTML='<div class=&quot;h-48 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-400&quot;>📰</div>';" />`;
+}
+function loadSaved(){ try { return JSON.parse(localStorage.getItem('savedArticles')||'[]'); } catch { return [] } }
+function persistSaved(){ localStorage.setItem('savedArticles', JSON.stringify(state.saved)); }
+function guardWindow(limit, page){ return (limit * page) < MAX_RESULTS_WINDOW; }
+function joinUnique(arr){ return [...new Set(arr.filter(Boolean).map(s=>String(s).trim()).filter(Boolean))]; }
+function chipHTML(type, value){ return `<span class="chip" data-type="${type}" data-value="${escapeHTML(value)}">${escapeHTML(type)}:${escapeHTML(value)} <button title="Remove">✕</button></span>`; }
+function renderChips(){
+  const box = $('#chips'); if(!box) return;
+  box.innerHTML = '';
+  for(const v of state.filters.domains) box.insertAdjacentHTML('beforeend', chipHTML('domain', v));
+  for(const v of state.filters.exclude_domains) box.insertAdjacentHTML('beforeend', chipHTML('exclude_domain', v));
+  for(const v of state.filters.source_ids) box.insertAdjacentHTML('beforeend', chipHTML('source', v));
+  for(const v of state.filters.exclude_source_ids) box.insertAdjacentHTML('beforeend', chipHTML('exclude_source', v));
+  box.querySelectorAll('.chip button').forEach(btn=>btn.addEventListener('click', (e)=>{
+    const chip = e.currentTarget.closest('.chip'); const t = chip.dataset.type; const val = chip.dataset.value;
+    const map = {domain:'domains', exclude_domain:'exclude_domains', source:'source_ids', exclude_source:'exclude_source_ids'};
+    const key = map[t]; if(!key) return;
+    state.filters[key] = (state.filters[key]||[]).filter(x=>String(x)!==String(val));
+    renderChips();
+    resetBucketsAndFetch();
+  }));
+}
+
+/* ======================== KEYWORD CLOUD ======================== */
+const STOPWORDS = new Set(['the','a','an','and','or','of','to','for','in','on','at','by','with','from','as','is','are','was','were','be','been','this','that','these','those','it','its','into','about','over','after','before','but','not','no','yes','you','your','we','they','he','she','his','her','their','our','us','them','i','me','my','mine','ours','theirs','up','down','out','new','news','top','all','more','says','say','will','can','could','should','would','just','one','two','three','—','–','&','•','…','–','—','’','“','”','\'','"']);
+function extractKeywords(items){
+  const counts = new Map();
+  const push = (word)=>{
+    if(!word) return;
+    const w = word.toLowerCase();
+    if(w.length < 3) return;
+    if(STOPWORDS.has(w)) return;
+    if(/^\d+([.,]\d+)*$/.test(w)) return;
+    counts.set(w, (counts.get(w)||0)+1);
+  };
+  for(const it of items){
+    const fields = [it?.title, it?.description, ...(it?.categories||[])].filter(Boolean).join(' ');
+    const tokens = fields.replace(/[^\p{L}\p{N}\s_-]/gu,' ').split(/\s+|_/).slice(0,200);
+    for(const t of tokens) push(t);
+  }
+  const arr = [...counts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,40);
+  return arr;
+}
+function rebuildKeywordCloud(){
+  const cloud = $('#keywordCloud');
+  if(!cloud) return;
+  const items = [...state.top.items, ...state.all.items, ...state.headlines.items];
+  const pairs = extractKeywords(items);
+  cloud.innerHTML = '';
+  if(pairs.length === 0){
+    cloud.innerHTML = '<p class="text-sm text-zinc-500">Keywords will appear as news loads.</p>';
+    return;
+  }
+  const max = Math.max(...pairs.map(p=>p[1]));
+  const min = Math.min(...pairs.map(p=>p[1]));
+  const span = Math.max(1, max-min);
+  for(const [word, count] of pairs){
+    const weight = (count - min) / span;
+    const size = 12 + Math.round(weight * 16);
+    const btn = document.createElement('button');
+    btn.textContent = word;
+    btn.className = "px-2 py-1 rounded-full border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800";
+    btn.style.fontSize = size+'px';
+    btn.addEventListener('click', ()=>{
+      const searchInput = $('#searchInput');
+      if(searchInput){ searchInput.value = word; }
+      state.filters.search = word;
+      resetBucketsAndFetch();
+      setStatus(`Filtering by keyword “${word}”`);
+    });
+    cloud.appendChild(btn);
+  }
+}
+$('#refreshCloud')?.addEventListener('click', ()=>{
+  // Clear keyword selection
+  const searchInput = $('#searchInput');
+  if (searchInput) searchInput.value = '';
+  if (state?.filters) state.filters.search = '';
+  // Refetch unfiltered results
+  if (typeof resetBucketsAndFetch === 'function') {
+    resetBucketsAndFetch();
+  }
+  // Rebuild the cloud after clearing
+  if (typeof rebuildKeywordCloud === 'function') {
+    rebuildKeywordCloud();
+  }
+  setStatus && setStatus('Keyword filter cleared');
+});
+
+/* ======================== RENDER ======================== */
+function skeletonCard(){
+  return `<article class="rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-soft">
+    <div class="h-48 skeleton"></div>
+    <div class="p-4 space-y-3">
+      <div class="h-4 w-2/3 skeleton rounded"></div>
+      <div class="h-4 w-1/2 skeleton rounded"></div>
+      <div class="h-3 w-full skeleton rounded"></div>
+    </div>
+  </article>`;
+}
+function renderCard(item){
+  const saved = state.saved.some(x=>x.uuid===item.uuid);
+  const srcHost = item.source ? String(item.source).replace(/^https?:\/\//,'').replace(/^www\./,'') : '';
+  return `<article class="group rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden hover:shadow-soft transition-shadow bg-white/70 dark:bg-zinc-900/60" data-uuid="${item.uuid}">
+    <a class="block relative" href="${item.url || '#'}" target="_blank" rel="noopener">
+      ${imageTag(item.image_url, item.title)}
+      <div class="absolute top-3 left-3 flex items-center gap-2">
+        <span class="px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wide bg-black/70 text-white">${escapeHTML((item.categories?.[0]||'news'))}</span>
+      </div>
+    </a>
+    <div class="p-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between gap-2 text-xs text-zinc-500">
+        <span class="truncate">${escapeHTML(srcHost)}</span>
+        <span>${escapeHTML(timeAgo(item.published_at))}</span>
+      </div>
+      <a href="${item.url || '#'}" target="_blank" rel="noopener" class="font-display text-xl leading-snug line-clamp-2 underline">${escapeHTML(item.title || 'Untitled')}</a>
+      <p class="text-sm text-zinc-600 dark:text-zinc-300 line-clamp-3">${escapeHTML(item.description || item.snippet || '')}</p>
+      <div class="flex items-center justify-end gap-2 hover-actions">
+        <button data-action="save" class="px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700">${saved?'Saved':'Save'}</button>
+      </div>
+    </div>
+  </article>`;
+}
+function renderFeatured(){
+  const first = state.top.items[0];
+  if(!first) return;
+  $('#featTitle').textContent = first.title||'';
+  $('#featImg').src = first.image_url || '';
+  $('#featSource').textContent = (first.source||'').replace(/^www\./,'');
+  $('#featTime').textContent = timeAgo(first.published_at);
+  $('#featLang').textContent = (first.language||'').slice(0,2).toUpperCase();
+  $('#featLink').href = first.url || '#';
+
+  // Init related on change
+  if(state.related.uuid !== first.uuid){
+    state.related = { uuid: first.uuid, page: 1, items: [], loading: false, done: false };
+    renderRelated();
+    fetchRelated();
+  }
+}
+function renderGrid(kind) {
+  const grid = kind==='top' ? $('#topGrid') : kind==='all' ? $('#allGrid') : kind==='saved' ? $('#savedGrid') : $('#headlinesGrid');
+  const metaEl = kind==='top' ? $('#metaTop') : kind==='all' ? $('#metaAll') : kind==='headlines' ? $('#metaHeadlines') : null;
+  if(!grid) return;
+  const bucket = kind==='saved' ? null : state[kind];
+  const items = kind==='saved' ? state.saved : bucket.items;
+
+  
+  // Special handling for Headlines: when there are no items, hide grid and show friendly message only
+  if (kind === 'headlines') {
+    const hGrid = document.getElementById('headlinesGrid');
+    const hEmpty = document.getElementById('headlinesEmpty');
+    if (items.length === 0) {
+      if (hGrid) { hGrid.innerHTML = ''; hGrid.classList.add('hidden'); }
+      if (hEmpty) { hEmpty.classList.remove('hidden'); }
+      if (metaEl) { metaEl.textContent = ''; }
+      return; // do not render skeletons for Headlines
+    } else {
+      if (hEmpty) { hEmpty.classList.add('hidden'); }
+      if (hGrid) { hGrid.classList.remove('hidden'); }
+    }
+  }
+if (kind==='saved'){
+    const isEmpty = items.length === 0;
+    $('#savedEmpty').classList.toggle('hidden', !isEmpty);
+    grid.classList.toggle('hidden', isEmpty);
+    grid.innerHTML = isEmpty ? '' : items.map(renderCard).join('');
+    if(!isEmpty) grid.querySelectorAll('[data-action="save"]').forEach(btn => btn.addEventListener('click', onSaveToggle));
+    return;
+  }
+
+  if (items.length === 0 && !(bucket?.loading)) {
+    grid.innerHTML = Array.from({length: 8}).map(()=>skeletonCard()).join('');
+  } else {
+    grid.innerHTML = items.map(renderCard).join('');
+    grid.querySelectorAll('[data-action="save"]').forEach(btn => btn.addEventListener('click', onSaveToggle));
+  }
+
+  if(metaEl && bucket){
+    const m = bucket.meta || {};
+    const parts = [];
+    if (m.found != null) parts.push(`Found ${m.found}`);
+    if (m.page != null) parts.push(`Page ${m.page}`);
+    if (m.returned != null) parts.push(`${m.returned} shown`);
+    metaEl.textContent = parts.join(' • ');
+  }
+}
+function renderRelated(){
+  const sec = $('#secRelated');
+  const grid = $('#relatedGrid');
+  const meta = $('#metaRelated');
+  if(!sec || !grid) return;
+
+  const items = state.related.items || [];
+  sec.classList.toggle('hidden', items.length === 0 && !state.related.loading);
+  if(items.length === 0 && state.related.loading){
+    grid.innerHTML = Array.from({length: 3}).map(()=>skeletonCard()).join('');
+    return;
+  }
+  grid.innerHTML = items.map(renderCard).join('');
+  grid.querySelectorAll('[data-action="save"]').forEach(btn => btn.addEventListener('click', onSaveToggle));
+  const m = state.related.meta || {};
+  meta.textContent = [m.found!=null?`Found ${m.found}`:'', m.page!=null?`Page ${m.page}`:'', m.returned!=null?`${m.returned} shown`:'' ].filter(Boolean).join(' • ');
+}
+
+/* ======================== LOAD MORE BUTTON UI ======================== */
+function getLoadButtons(kind){
+  if (kind==='top') return ['#loadMoreTop', '#loadMoreTop2'].map(sel=>document.querySelector(sel)).filter(Boolean);
+  if (kind==='all') return ['#loadMoreAll', '#loadMoreAll2'].map(sel=>document.querySelector(sel)).filter(Boolean);
+  if (kind==='related') return ['#loadMoreRelated'].map(sel=>document.querySelector(sel)).filter(Boolean);
+  if (kind==='headlines') return ['#loadMoreHeadlines'].map(sel=>document.querySelector(sel)).filter(Boolean);
+  return [];
+}
+function setLoadMoreLoading(kind, isLoading){
+  for(const btn of getLoadButtons(kind)){
+    if(isLoading){
+      btn.disabled = true;
+      btn.innerHTML = `<span class="inline-flex items-center gap-2">
+        <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg> Loading…</span>`;
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Load more';
+    }
+  }
+}
+function setLoadMoreVisibility(kind){
+  for(const btn of getLoadButtons(kind)){
+    btn.classList.toggle('hidden', !!state[kind].done);
+  }
+}
+
+/* ======================== REQUEST / QUOTA ======================== */
+function captureQuotaHeaders(res){
+  const q = {};
+  const keys = ['X-RateLimit-Limit','X-RateLimit-Remaining','X-RateLimit-Reset','X-UsageLimit-Limit','X-UsageLimit-Remaining','Retry-After'];
+  for(const k of keys){
+    const v = res.headers.get(k);
+    if(v!=null) q[k]=v;
+  }
+  state.quota = {...state.quota, ...q};
+  const parts = [];
+  if(q['X-RateLimit-Remaining']!=null && q['X-RateLimit-Limit']!=null){
+    parts.push(`Rate ${q['X-RateLimit-Remaining']}/${q['X-RateLimit-Limit']}`);
+  }
+  if(q['X-UsageLimit-Remaining']!=null && q['X-UsageLimit-Limit']!=null){
+    parts.push(`Usage ${q['X-UsageLimit-Remaining']}/${q['X-UsageLimit-Limit']}`);
+  }
+  if(q['Retry-After']!=null) parts.push(`Retry after ${q['Retry-After']}s`);
+  $('#quota').textContent = parts.join(' • ');
+}
+
+/* ======================== FETCH ======================== */
+function commonParams(limit, page){
+  const exCats = state.filters.exclude_categories.join(',');
+  const sfields = state.filters.search_fields.join(',');
+  return {
+    search: state.filters.search || '',
+    search_fields: state.filters.search ? sfields : '',
+    categories: state.filters.categories || '',
+    exclude_categories: exCats || '',
+    locale: state.filters.locale || '',
+    language: state.filters.language || '',
+    published_on: state.filters.published_on || '',
+    published_after: state.filters.published_after || '',
+    published_before: state.filters.published_before || '',
+    sort: state.filters.sort || '',
+    domains: state.filters.domains,
+    exclude_domains: state.filters.exclude_domains,
+    source_ids: state.filters.source_ids,
+    exclude_source_ids: state.filters.exclude_source_ids,
+    limit, page
+  };
+}
+async function fetchBucket(kind){
+  const bucket = state[kind];
+  if(bucket.loading || bucket.done) { setLoadMoreVisibility(kind); return; }
+  if(!guardWindow(PAGE_SIZE, bucket.page)){ bucket.done = true; setLoadMoreVisibility(kind); return; }
+
+  bucket.loading = true;
+  setLoadMoreLoading(kind, true);
+  setStatus(`Loading ${kind}…`);
+
+  const extra = kind==='headlines' ? {
+    headlines_per_category: state.filters.headlines_per_category,
+    include_similar: state.filters.include_similar ? 'true' : 'false'
+  } : {};
+  const params = {...commonParams(PAGE_SIZE, bucket.page), ...extra};
+  const url = buildURL(ENDPOINTS[kind], params);
+
+  try {
+    const res = await fetch(url);
+    captureQuotaHeaders(res);
+    if(!res.ok){
+      const errText = await res.text().catch(()=> '');
+      let msg = `HTTP ${res.status}`;
+      if (res.status === 401) msg = 'Invalid or missing api_token.';
+      if (res.status === 402) msg = 'Usage limit reached.';
+      if (res.status === 403) msg = 'Endpoint access restricted by plan (e.g., Headlines needs Standard+).';
+      if (res.status === 429) msg = 'Rate limit reached.';
+      const retry = res.headers.get('Retry-After');
+      throw new Error(`${msg}${retry?` • Retry-After: ${retry}s`:''}${errText ? ' • '+errText : ''}`);
+    }
+    const json = await res.json();
+    const list = (json.data||[]).filter(x=>x && x.uuid);
+
+    // Append unique
+    const seen = new Set(bucket.items.map(x=>x.uuid));
+    let appended = 0;
+    for(const item of list){ if(!seen.has(item.uuid)){ bucket.items.push(item); appended++; } }
+
+    const returned = Number(json?.meta?.returned ?? list.length);
+    if (appended > 0) bucket.page++;
+    if (returned < (params.limit||PAGE_SIZE)) bucket.done = true;
+    bucket.meta = { found: json?.meta?.found, returned: returned, page: (bucket.page-1) };
+
+    renderGrid(kind);
+    if(kind==='top') renderFeatured();
+    populateLocales();
+    rebuildKeywordCloud();
+    setStatus('');
+  } catch (e) {
+    console.error(e);
+    setStatus(`Failed to load ${kind}: ${e.message}`);
+    if (kind === 'headlines') {
+      const hGrid = document.getElementById('headlinesGrid');
+      const hEmpty = document.getElementById('headlinesEmpty');
+      if (hGrid) { hGrid.innerHTML = ''; hGrid.classList.add('hidden'); }
+      if (hEmpty) { hEmpty.classList.remove('hidden'); }
+    }
+  } finally {
+    bucket.loading = false;
+    setLoadMoreLoading(kind, false);
+    setLoadMoreVisibility(kind);
+  }
+}
+
+/* ======================== SIMILAR FETCH ======================== */
+async function fetchRelated(){
+  const kind = 'related';
+  const bucket = state.related;
+  if(!bucket.uuid) return;
+  if(bucket.loading || bucket.done) { setLoadMoreVisibility(kind); return; }
+  if(!guardWindow(PAGE_SIZE, bucket.page)){ bucket.done = true; setLoadMoreVisibility(kind); return; }
+
+  bucket.loading = true;
+  setLoadMoreLoading(kind, true);
+  const sec = document.querySelector('#secRelated');
+  if(sec) sec.classList.remove('hidden');
+
+  const params = {...commonParams(Math.min(12, PAGE_SIZE), bucket.page)};
+  const url = buildURL(ENDPOINTS.similar(bucket.uuid), params);
+
+  try {
+    const res = await fetch(url);
+    captureQuotaHeaders(res);
+    if(!res.ok){
+      const errText = await res.text().catch(()=> '');
+      throw new Error(`Similar HTTP ${res.status}${errText? ' • '+errText : ''}`);
+    }
+    const json = await res.json();
+    const list = (json.data||[]).filter(x=>x && x.uuid);
+
+    const seen = new Set(bucket.items.map(x=>x.uuid));
+    let appended = 0;
+    for(const item of list){ if(!seen.has(item.uuid)){ bucket.items.push(item); appended++; } }
+
+    const returned = Number(json?.meta?.returned ?? list.length);
+    if (appended > 0) bucket.page++;
+    if (returned < (params.limit)) bucket.done = true;
+    bucket.meta = { found: json?.meta?.found, returned: returned, page: (bucket.page-1) };
+
+    renderRelated();
+    setStatus('');
+  } catch(e){
+    console.error(e);
+    setStatus(`Failed to load related: ${e.message}`);
+  } finally {
+    bucket.loading = false;
+    setLoadMoreLoading(kind, false);
+    setLoadMoreVisibility(kind);
+  }
+}
+
+/* ======================== UUID FETCH / HYDRATION ======================== */
+async function fetchByUUID(uuid){
+  try{
+    const url = buildURL(ENDPOINTS.uuid(uuid));
+    const res = await fetch(url);
+    captureQuotaHeaders(res);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const js = await res.json();
+    return js?.data || null;
+  } catch(e){
+    console.error('UUID fetch failed', e);
+    return null;
+  }
+}
+async function hydrateSaved(){
+  const updates = [];
+  for (let i=0; i<state.saved.length; i++){
+    const it = state.saved[i];
+    if (!it?.title || !it?.published_at || !it?.url){
+      const fresh = await fetchByUUID(it.uuid);
+      if(fresh){ state.saved[i] = fresh; updates.push(true); }
+    }
+  }
+  if(updates.length>0){
+    persistSaved();
+    renderGrid('saved');
+  }
+}
+async function loadSingleUUID(){
+  if(!URL_UUID) return;
+  const item = await fetchByUUID(URL_UUID);
+  if(item){
+    state.top.items.unshift(item);
+    renderGrid('top'); renderFeatured();
+    if(!state.saved.some(x=>x.uuid===item.uuid)){
+      state.saved.unshift(item);
+      persistSaved();
+      renderGrid('saved');
+    }
+    rebuildKeywordCloud();
+    window.location.hash = '#secTop';
+  }
+}
+
+/* ======================== SAVE TOGGLE ======================== */
+function onSaveToggle(e){
+  const card = e.currentTarget.closest('[data-uuid]');
+  const uuid = card?.dataset.uuid;
+  if(!uuid) return;
+
+  const allPool = [...state.top.items, ...state.all.items, ...state.saved, ...state.headlines.items, ...state.related.items];
+  const item = allPool.find(x=>x.uuid===uuid);
+  if(!item) return;
+
+  const idx = state.saved.findIndex(x=>x.uuid===uuid);
+  if(idx === -1){
+    state.saved.unshift(item);
+    setStatus('Saved to “Saved”.');
+  } else {
+    state.saved.splice(idx, 1);
+    setStatus('Removed from “Saved”.');
+  }
+  persistSaved();
+  renderGrid('saved');
+  renderGrid('top');
+  renderGrid('all');
+  renderGrid('headlines');
+  renderRelated();
+  setTimeout(()=>setStatus(''), 1200);
+}
+
+/* ======================== FILTERING / RESET ======================== */
+function resetBuckets(){
+  for (const k of ['headlines','top','all']){
+    state[k] = { page: 1, items: [], loading: false, done: false, meta: {} };
+  }
+  state.related = { uuid: state.related.uuid, page: 1, items: [], loading: false, done: false, meta:{} };
+}
+function resetBucketsAndFetch(){
+  // Sort guard: disable relevance when no search
+  const rel = document.querySelector('#sortSelect');
+  if(state.filters.search.trim()===''){
+    if(rel && rel.value==='relevance_score'){ rel.value=''; state.filters.sort=''; }
+    rel?.querySelector('option[value="relevance_score"]')?.setAttribute('disabled','disabled');
+  } else {
+    rel?.querySelector('option[value="relevance_score"]')?.removeAttribute('disabled');
+  }
+
+  resetBuckets();
+  fetchBucket('headlines');
+  fetchBucket('top');
+  fetchBucket('all');
+}
+function resetFilters(){
+  $('#publishedOn').value = '';
+  $('#publishedAfter').value = '';
+  $('#publishedBefore').value = '';
+  $('#categoryFilter').value = '';
+  $('#excludeCategories').selectedIndex = -1;
+  $('#localeFilter').value = '';
+  $('#languageFilter').value = '';
+  $('#searchInput').value = '';
+  $('#sortSelect').value = '';
+  document.querySelectorAll('.sf').forEach(cb=>cb.checked = (cb.value==='title' || cb.value==='main_text'));
+
+  state.filters = {
+    ...state.filters,
+    search: '',
+    search_fields: ['title','main_text'],
+    categories: '',
+    exclude_categories: [],
+    locale: '',
+    language: '',
+    published_on: '',
+    published_after: '',
+    published_before: '',
+    sort: '',
+    domains: [],
+    exclude_domains: [],
+    source_ids: [],
+    exclude_source_ids: []
+  };
+  renderChips();
+
+  // Clear period inputs explicitly
+  $('#publishedAfter').value = '';
+  $('#publishedBefore').value = '';
+
+  // Related section reset
+  state.related = { uuid: '', page: 1, items: [], loading: false, done: false, meta:{} };
+  $('#relatedGrid').innerHTML = '';
+  $('#secRelated').classList.add('hidden');
+
+  resetBucketsAndFetch();
+}
+
+/* ======================== LOCALE POPULATION ======================== */
+async function populateLocales(){
+  const select = $('#localeFilter');
+  if(!select) return;
+  const haveLocales = new Set([ ...state.top.items, ...state.all.items, ...state.headlines.items ].map(x => x && x.locale).filter(Boolean));
+  for(const opt of select.options){
+    if(!opt.value) continue;
+    opt.disabled = haveLocales.size ? !haveLocales.has(opt.value) : false;
+    opt.className = opt.disabled ? 'text-zinc-400' : '';
+  }
+}
+
+/* ======================== SOURCES PICKER ======================== */
+const srcState = { page: 1, data: [], meta: {} };
+function renderSources(){
+  const list = $('#srcList'); const meta = $('#srcMeta');
+  list.innerHTML = srcState.data.map(s => {
+    const id = escapeHTML(s.id || '');
+    const dom = escapeHTML(s.domain || '');
+    const name = escapeHTML(s.name || dom || id || 'Source');
+    const cat = escapeHTML((s.categories||[]).join(', '));
+    return `<label class="flex items-center gap-3 p-3 border border-zinc-200 dark:border-zinc-800 rounded-xl">
+      <input type="checkbox" class="src-check" data-id="${id}" data-domain="${dom}">
+      <div class="min-w-0">
+        <div class="font-medium truncate">${name}</div>
+        <div class="text-xs text-zinc-500">${dom || '—'} ${cat? ' • '+cat:''}</div>
+      </div>
+    </label>`;
+  }).join('');
+  meta.textContent = `Page ${srcState.meta.page || srcState.page} • ${srcState.data.length} shown`;
+}
+async function fetchSources(){
+  const params = {
+    limit: 20,
+    page: srcState.page,
+    search: $('#srcSearch').value.trim(),
+    categories: $('#srcCat').value || '',
+    language: $('#srcLang').value || '',
+    locale: $('#srcLoc').value || ''
+  };
+  const url = buildURL(ENDPOINTS.sources, params);
+  try{
+    const res = await fetch(url);
+    captureQuotaHeaders(res);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const js = await res.json();
+    srcState.data = js?.data || [];
+    srcState.meta = { page: params.page, returned: js?.meta?.returned };
+    renderSources();
+  } catch(e){
+    $('#srcList').innerHTML = `<div class="text-sm text-red-600">Failed to load sources: ${escapeHTML(e.message)}</div>`;
+  }
+}
+
+/* ======================== UI WIRING ======================== */
+function wireUI(){
+  // Search
+  $('#searchInput')?.addEventListener('input', (e)=>{
+    state.filters.search = e.target.value.trim();
+    resetBucketsAndFetch();
+  });
+
+  // Published On
+  $('#publishedOn')?.addEventListener('change', (e)=>{
+    state.filters.published_on = e.target.value;
+    if (e.target.value){
+      state.filters.published_after = '';
+      state.filters.published_before = '';
+      $('#publishedAfter').value = '';
+      $('#publishedBefore').value = '';
+    }
+    resetBucketsAndFetch();
+  });
+
+  // Range
+  const onRangeChange = ()=>{
+    const a = $('#publishedAfter').value;
+    const b = $('#publishedBefore').value;
+    state.filters.published_after = a || '';
+    state.filters.published_before = b || '';
+    if (a || b){
+      state.filters.published_on = '';
+      $('#publishedOn').value = '';
+    }
+    resetBucketsAndFetch();
+  };
+  $('#publishedAfter')?.addEventListener('change', onRangeChange);
+  $('#publishedBefore')?.addEventListener('change', onRangeChange);
+  $('#clearPeriod')?.addEventListener('click', ()=>{
+    $('#publishedAfter').value = '';
+    $('#publishedBefore').value = '';
+    state.filters.published_after = '';
+    state.filters.published_before = '';
+    resetBucketsAndFetch();
+  });
+
+  // Categories
+  $('#categoryFilter')?.addEventListener('change', (e)=>{
+    state.filters.categories = e.target.value;
+    resetBucketsAndFetch();
+  });
+  // Exclude Categories
+  $('#excludeCategories')?.addEventListener('change', (e)=>{
+    const sel = Array.from(e.target.selectedOptions).map(o=>o.value);
+    state.filters.exclude_categories = sel;
+    resetBucketsAndFetch();
+  });
+
+  // Sort
+  $('#sortSelect')?.addEventListener('change', (e)=>{
+    state.filters.sort = e.target.value;
+    resetBucketsAndFetch();
+  });
+
+  // Locale
+  $('#localeFilter')?.addEventListener('change', (e)=>{
+    state.filters.locale = e.target.value;
+    resetBucketsAndFetch();
+  });
+
+  // Language
+  $('#languageFilter')?.addEventListener('change', (e)=>{
+    state.filters.language = e.target.value;
+    resetBucketsAndFetch();
+  });
+
+  // Search fields
+  document.querySelectorAll('.sf').forEach(cb => cb.addEventListener('change', ()=>{
+    const vals = Array.from(document.querySelectorAll('.sf:checked')).map(x=>x.value);
+    state.filters.search_fields = vals.length? vals : ['title','main_text'];
+    resetBucketsAndFetch();
+  }));
+
+  // Headlines controls
+  $('#headlinesPerCat')?.addEventListener('change', (e)=>{
+    let v = parseInt(e.target.value||'6',10); if(isNaN(v)||v<1) v=6; if(v>20) v=20;
+    state.filters.headlines_per_category = v; e.target.value = v;
+    state.headlines = { page:1, items:[], loading:false, done:false };
+    fetchBucket('headlines');
+  });
+  $('#headlinesIncludeSimilar')?.addEventListener('change', (e)=>{
+    state.filters.include_similar = e.target.checked;
+    state.headlines = { page:1, items:[], loading:false, done:false };
+    fetchBucket('headlines');
+  });
+
+  // Reset
+  $('#resetFilters')?.addEventListener('click', resetFilters);
+
+  // Load more – buttons
+  const map = [
+    ['#loadMoreHeadlines', 'headlines'],
+    ['#loadMoreTop', 'top'], ['#loadMoreTop2', 'top'],
+    ['#loadMoreAll', 'all'], ['#loadMoreAll2', 'all'],
+    ['#loadMoreRelated', 'related']
+  ];
+  for(const [sel, kind] of map){
+    const btn = document.querySelector(sel);
+    btn?.addEventListener('click', ()=> kind==='related' ? fetchRelated() : fetchBucket(kind));
+  }
+
+  // Chips box click handled in renderChips()
+
+  // Sources dialog
+  const dlg = $('#sourcesDlg');
+  $('#btnSources')?.addEventListener('click', ()=>{ dlg.showModal(); fetchSources(); });
+  $('#closeDlg')?.addEventListener('click', ()=> dlg.close());
+  $('#srcRefresh')?.addEventListener('click', ()=>{ srcState.page=1; fetchSources(); });
+  $('#srcPrev')?.addEventListener('click', ()=>{ if(srcState.page>1){ srcState.page--; fetchSources(); } });
+  $('#srcNext')?.addEventListener('click', ()=>{ srcState.page++; fetchSources(); });
+  $('#applySources')?.addEventListener('click', ()=>{
+    const checks = Array.from(document.querySelectorAll('.src-check:checked'));
+    const ids = joinUnique(checks.map(c=>c.dataset.id).filter(Boolean));
+    const doms = joinUnique(checks.map(c=>c.dataset.domain).filter(Boolean));
+    // For simplicity, add picked domains to include list; IDs to include list
+    state.filters.source_ids = joinUnique([...state.filters.source_ids, ...ids]);
+    state.filters.domains = joinUnique([...state.filters.domains, ...doms]);
+    renderChips();
+    dlg.close();
+    resetBucketsAndFetch();
+  });
+
+  // Keyword cloud refresh wired earlier
+
+  // Theme
+  const root = document.documentElement;
+  function applyTheme(){ root.classList.toggle('dark', state.theme==='dark'); }
+  applyTheme();
+  $('#themeBtn')?.addEventListener('click', ()=>{
+    state.theme = state.theme==='dark' ? 'light' : 'dark';
+    localStorage.setItem('theme', state.theme);
+    applyTheme();
+  });
+}
+
+/* ======================== INIT ======================== */
+function getLoadButtons(kind){return [];} // placeholder to satisfy linter in some browsers before declaration hoisting
+async function init(){
+  renderGrid('headlines'); renderGrid('top'); renderGrid('all'); renderGrid('saved'); // skeletons / empty view first
+  wireUI();
+  renderChips();
+  hydrateSaved();
+  loadSingleUUID();
+  setLoadMoreVisibility('headlines');
+  setLoadMoreVisibility('top');
+  setLoadMoreVisibility('all');
+  fetchBucket('headlines');
+  fetchBucket('top');
+  fetchBucket('all');
+}
+init();
+</script>
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Try to locate the Headlines section by common ids/classes/datasets
+  const candidates = [
+    document.querySelector('#headlines'),
+    document.querySelector('[data-section="headlines"]'),
+    document.querySelector('.headlines'),
+    // fallback to a section containing a heading with text "Headlines"
+    (() => {
+      const allSections = Array.from(document.querySelectorAll('section, div, main, article'));
+      return allSections.find(sec => {
+        const h = sec.querySelector('h1,h2,h3,h4');
+        return h && /headlines/i.test(h.textContent || '');
+      }) || null;
+    })()
+  ].filter(Boolean);
+  const container = candidates[0];
+
+  function hideByText(root, texts) {
+    if (!root) return;
+    const nodes = root.querySelectorAll('label, button, .btn, .control, .field, span, div');
+    const toLower = s => (s||'').trim().toLowerCase();
+    nodes.forEach(el => {
+      const t = toLower(el.textContent);
+      if (texts.some(x => t.includes(x))) {
+        const group = el.closest('.form-group, .control, .field, .flex, .grid, .mb-*, .mt-*, .space-y-*, .space-x-*, .input-group, .setting-row') || el;
+        if (group) group.style.display = 'none';
+      }
+    });
+  }
+  // Hide specific items within Headlines section
+  hideByText(container, ['per category', 'include similar', 'load more']);
+
+  // As an additional safeguard, if there is a dedicated "Load More" button inside Headlines, hide it
+  if (container) {
+    // Hide buttons that look like load more even without matching text (class or data attribute based)
+    Array.from(container.querySelectorAll('button, a')).forEach(btn => {
+      const txt = (btn.textContent || '').trim().toLowerCase();
+      if (txt === 'load more' || txt.includes('load more')) {
+        btn.style.display = 'none';
+      }
+    });
+  }
+});
+</script>
+
+
+<script>
+(function() {
+  function hideHeadlinesControls() {
+    const per = document.getElementById('headlinesPerCat');
+    if (per) {
+      const lab = per.closest('label');
+      if (lab) lab.style.display = 'none';
+    }
+    const inc = document.getElementById('headlinesIncludeSimilar');
+    if (inc) {
+      const lab2 = inc.closest('label');
+      if (lab2) lab2.style.display = 'none';
+    }
+    const load = document.getElementById('loadMoreHeadlines');
+    if (load) {
+      load.style.display = 'none';
+    }
+  }
+
+  // Run once on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', hideHeadlinesControls);
+  } else {
+    hideHeadlinesControls();
+  }
+
+  // If app code later re-renders the section, keep it hidden
+  const sec = document.getElementById('secHeadlines') || document.querySelector('[data-section="headlines"]');
+  if (sec && 'MutationObserver' in window) {
+    const mo = new MutationObserver(hideHeadlinesControls);
+    mo.observe(sec, { childList: true, subtree: true });
+  }
+})();
+</script>
+
+\
+<script>\
+document\.addEventListener\('DOMContentLoaded',\ \(\)=>\{\
+\ \ document\.querySelectorAll\('\*'\)\.forEach\(el=>\{\
+\ \ \ \ if\(\(el\.textContent\|\|''\)\.match\(/Requires\s\+Standard\s\+plan\s\+or\s\+above/i\)\)\{\
+\ \ \ \ \ \ el\.style\.display='none';\
+\ \ \ \ \}\
+\ \ \}\);\
+\}\);\
+</script>\
+
+
+<!-- Subscribe Modal -->
+<div id="subscribeModal" class="fixed inset-0 z-[100] hidden">
+  <div id="subscribeOverlay" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-xl">
+      <div class="p-5 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+        <h3 class="text-lg font-semibold">Upgrade to Standard</h3>
+        <button id="subscribeClose" class="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="p-5 space-y-4">
+        <p class="text-sm text-zinc-600 dark:text-zinc-300">Subscribing unlocks Headlines and more. Choose a plan to continue.</p>
+        <form id="subscribeForm" class="space-y-3">
+          <label class="block text-sm">
+            <span class="block mb-1 text-zinc-700 dark:text-zinc-300">Email</span>
+            <input type="email" required class="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2">
+          </label>
+          <div class="flex items-center gap-3 text-sm">
+            <label class="inline-flex items-center gap-2">
+              <input type="radio" name="plan" value="standard" checked>
+              <span>Standard</span>
+            </label>
+            <label class="inline-flex items-center gap-2">
+              <input type="radio" name="plan" value="pro">
+              <span>Pro</span>
+            </label>
+          </div>
+          <button type="submit" class="w-full mt-2 px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Continue</button>
+        </form>
+        <p id="subscribeNote" class="hidden text-xs text-green-700 dark:text-green-400">Thanks! This is a demo — no payment collected.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  const modal = document.getElementById('subscribeModal');
+  const overlay = document.getElementById('subscribeOverlay');
+  const closeBtn = document.getElementById('subscribeClose');
+  const form = document.getElementById('subscribeForm');
+  const note = document.getElementById('subscribeNote');
+  function openModal(){ if(modal) modal.classList.remove('hidden'); }
+  function closeModal(){ if(modal) modal.classList.add('hidden'); }
+  overlay?.addEventListener('click', closeModal);
+  closeBtn?.addEventListener('click', closeModal);
+  form?.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    note?.classList.remove('hidden');
+    setTimeout(closeModal, 1000);
+  });
+  // Expose for button click
+  window.__openSubscribeModal = openModal;
+})();
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const empty = document.getElementById('headlinesEmpty');
+  if (!empty) return;
+  // Ensure a right-corner bar exists
+  let bar = empty.querySelector('.headlines-error-actions');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.className = 'headlines-error-actions flex items-center justify-end mt-3';
+    empty.appendChild(bar);
+  }
+  // Create/ensure Subscribe button
+  let btn = empty.querySelector('#btnSubscribeHeadlines');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = 'btnSubscribeHeadlines';
+    btn.className = 'px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm';
+    btn.textContent = 'Subscribe';
+    bar.appendChild(btn);
+  }
+  btn.addEventListener('click', function(){
+    if (typeof window.__openSubscribeModal === 'function') window.__openSubscribeModal();
+  });
+});
+</script>
+
+
+<!-- Scroll-to-top button (UI-only) -->
+<button id="toTopBtn" aria-label="Scroll to top" title="Back to top">
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 5l-7 7m7-7l7 7m-7-7v14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</button>
+
+<script>
+
+/* ==================== UI ENHANCEMENT SCRIPTS (no logic change) ==================== */
+(function(){
+  // Active nav highlight
+  const links = Array.from(document.querySelectorAll('header .tab-link'));
+  function setActive(){
+    const hash = location.hash || '#secTop';
+    links.forEach(a => {
+      const href = a.getAttribute('href');
+      a.classList.toggle('is-active', href === hash);
+    });
+  }
+  window.addEventListener('hashchange', setActive, {passive:true});
+  setActive();
+
+  // Scroll-to-top visibility & behavior
+  const toTop = document.getElementById('toTopBtn');
+  function onScroll(){
+    if (!toTop) return;
+    const y = window.scrollY || document.documentElement.scrollTop;
+    toTop.classList.toggle('show', y > 600);
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+  toTop && toTop.addEventListener('click', () => window.scrollTo({top:0, behavior:'smooth'}));
+
+  // Slight parallax effect for featured image
+  const feat = document.getElementById('featImg');
+  if (feat) {
+    window.addEventListener('scroll', () => {
+      const y = Math.min(60, window.scrollY * 0.04);
+      feat.style.transform = `translateY(${y}px) scale(1.02)`;
+    }, {passive:true});
+  }
+})();
+
+</script>
+
+<script>
+/* ===== Override: Keyword Cloud should NOT autofill search; just highlight ===== */
+(function(){
+  // Keep a global memory of selected keyword for styling only
+  window._kwSelected = window._kwSelected || "";
+
+  // Save original for fallback (if needed)
+  const _orig_rebuild = window.rebuildKeywordCloud;
+
+  window.rebuildKeywordCloud = function(){
+    const cloud = document.getElementById('keywordCloud');
+    if(!cloud) return;
+
+    const items = [...(state?.top?.items||[]), ...(state?.all?.items||[]), ...(state?.headlines?.items||[])];
+    const pairs = extractKeywords(items);
+    cloud.innerHTML = '';
+    if(pairs.length === 0){
+      cloud.innerHTML = '<p class="text-sm text-zinc-500">Keywords will appear as news loads.</p>';
+      return;
+    }
+    const max = Math.max(...pairs.map(p=>p[1]));
+    const min = Math.min(...pairs.map(p=>p[1]));
+    const span = Math.max(1, max-min);
+
+    for(const [word, count] of pairs){
+      const weight = (count - min) / span;
+      const size = 12 + Math.round(weight * 16);
+      const btn = document.createElement('button');
+      btn.textContent = word;
+      btn.className = "px-2 py-1 rounded-full border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800";
+      btn.style.fontSize = size+'px';
+
+      // Visual selection only: no search input, no filter changes
+      btn.addEventListener('click', ()=>{
+        window._kwSelected = word;
+        cloud.querySelectorAll('button').forEach(b=>b.classList.remove('kw-selected'));
+        btn.classList.add('kw-selected');
+        if (typeof setStatus === 'function') setStatus(`Keyword selected: “${word}”`);
+      });
+
+      // Apply selection if previously chosen
+      if (window._kwSelected === word){
+        btn.classList.add('kw-selected');
+      }
+      cloud.appendChild(btn);
+    }
+  };
+
+  // Ensure refresh button clears only the visual selection (in addition to existing behavior)
+  const rc = document.getElementById('refreshCloud');
+  if (rc) {
+    rc.addEventListener('click', ()=>{
+      window._kwSelected = "";
+      // Rebuild to remove highlight
+      if (typeof window.rebuildKeywordCloud === 'function') {
+        setTimeout(window.rebuildKeywordCloud, 0);
+      }
+    });
+  }
+})();
+</script>
+
+
+<script>
+/* ===== Scroll spy for active nav tabs ===== */
+(function(){
+  const links = Array.from(document.querySelectorAll('header .tab-link'));
+  const byHash = Object.fromEntries(links.map(a => [a.getAttribute('href'), a]));
+  function setActiveByHash(h){
+    links.forEach(a => a.classList.toggle('is-active', a.getAttribute('href') === h));
+  }
+  // Hash-based fallback
+  window.addEventListener('hashchange', ()=> setActiveByHash(location.hash || '#secHeadlines'), {passive:true});
+  setActiveByHash(location.hash || '#secHeadlines');
+
+  // Intersection-based scroll spy
+  const sections = ['#secRelated','#secHeadlines','#secTop','#secAll','#secSaved']
+    .map(sel => document.querySelector(sel)).filter(Boolean);
+  if ('IntersectionObserver' in window && sections.length){
+    const io = new IntersectionObserver(entries => {
+      // Pick the most visible entry
+      let top = entries.filter(e => e.isIntersecting)
+                       .sort((a,b)=> b.intersectionRatio - a.intersectionRatio)[0];
+      if (top){
+        const id = '#' + top.target.id;
+        setActiveByHash(id);
+      }
+    }, { rootMargin: '-40% 0px -55% 0px', threshold: [0, .25, .5, .75, 1] });
+    sections.forEach(s => io.observe(s));
+  }
+})();
+</script>
+
+
+<script>
+// ===== Delight Pack JS =====
+(function(){
+  // 1) Scroll progress bar
+  let bar = document.getElementById('scrollProgress');
+  if (!bar){
+    bar = document.createElement('div');
+    bar.id = 'scrollProgress';
+    document.body.appendChild(bar);
+  }
+  function updateBar(){
+    const h = document.documentElement;
+    const scrolled = (h.scrollTop || document.body.scrollTop);
+    const height = (h.scrollHeight - h.clientHeight);
+    const pct = height > 0 ? (scrolled / height) * 100 : 0;
+    bar.style.width = pct + '%';
+  }
+  window.addEventListener('scroll', updateBar, {passive:true});
+  window.addEventListener('resize', updateBar, {passive:true});
+  updateBar();
+
+  // 2) Hero parallax: apply to #featImg if present, or any [data-parallax]
+  const candidates = [];
+  const feat = document.getElementById('featImg');
+  if (feat) candidates.push(feat);
+  document.querySelectorAll('[data-parallax]').forEach(el => candidates.push(el));
+  function onParallax(){
+    const y = window.scrollY || document.documentElement.scrollTop;
+    candidates.forEach(el => {
+      const speed = parseFloat(el.getAttribute('data-parallax-speed') || '0.05');
+      const offset = Math.min(80, y * speed);
+      el.style.transform = `translateY(${offset}px) scale(1.02)`;
+    });
+  }
+  if (candidates.length){
+    window.addEventListener('scroll', onParallax, {passive:true});
+    onParallax();
+    candidates.forEach(el => el.classList.add('parallax'));
+  }
+
+  // 3) Inject CTA button in Featured hero title area if available
+  try {
+    const title = document.getElementById('featTitle');
+    if (title && !document.getElementById('ctaReadMore')) {
+      const btn = document.createElement('a');
+      btn.id = 'ctaReadMore';
+      btn.href = '#secRelated';
+      btn.className = 'cta-readmore mt-3 inline-flex';
+      btn.textContent = 'Read more';
+      title.insertAdjacentElement('afterend', btn);
+    }
+  } catch(e){ /* noop */ }
+})();
+</script>
+
+
+<script>
+/* ===== Keyword Bubble + Heatmap Override (visual only) ===== */
+(function(){
+  // Preserve a visual selection only
+  window._kwSelected = window._kwSelected || "";
+
+  function tier(size){ // map a 0..1 weight to size tier 1..5
+    if (size < .2) return 1;
+    if (size < .4) return 2;
+    if (size < .6) return 3;
+    if (size < .8) return 4;
+    return 5;
+  }
+
+  // Optional light categorization by simple heuristics (can be extended)
+  function inferCat(word){
+    const w = String(word||'').toLowerCase();
+    if (/ai|tech|apple|google|microsoft|software|chip|quantum|startup/.test(w)) return 'kw-tech';
+    if (/market|stock|bank|business|fund|econom|crypto/.test(w)) return 'kw-biz';
+    if (/election|policy|senate|parliament|politic|biden|trump|kremlin|eu/.test(w)) return 'kw-polit';
+    if (/covid|health|cancer|fitness|diet|vaccine|wellness/.test(w)) return 'kw-health';
+    if (/sport|match|league|goal|fifa|nba|premier|olympic/.test(w)) return 'kw-sports';
+    return '';
+  }
+
+  const _orig = window.rebuildKeywordCloud;
+  window.rebuildKeywordCloud = function(){
+    const cloud = document.getElementById('keywordCloud');
+    if(!cloud) return;
+    const items = [...(state?.top?.items||[]), ...(state?.all?.items||[]), ...(state?.headlines?.items||[])];
+    const pairs = extractKeywords(items);
+    cloud.innerHTML = '';
+    if(!pairs || !pairs.length){
+      cloud.innerHTML = '<p class="text-sm text-zinc-500">Keywords will appear as news loads.</p>';
+      return;
+    }
+    const max = Math.max(...pairs.map(p=>p[1]));
+    const min = Math.min(...pairs.map(p=>p[1]));
+    const span = Math.max(1, max-min);
+
+    let delayBase = 0;
+    for(const [word, count] of pairs){
+      const weight = (count - min) / span;       // 0..1
+      const sizeTier = tier(weight);             // 1..5
+      const heat = 0.7 + weight * 0.3;           // opacity 0.7..1
+      const btn = document.createElement('button');
+      btn.textContent = word;
+      btn.className = `kw-bubble kw-s-${sizeTier} ${inferCat(word)}`;
+      btn.style.setProperty('--heat', heat);
+      btn.style.setProperty('--delay', `${(delayBase%6)*0.25}s`);
+      delayBase++;
+
+      // visual selection only
+      btn.addEventListener('click', ()=>{
+        window._kwSelected = word;
+        cloud.querySelectorAll('.kw-bubble').forEach(b=>b.classList.remove('kw-selected'));
+        btn.classList.add('kw-selected');
+        if (typeof setStatus === 'function') setStatus(`Keyword selected: “${word}”`);
+      });
+
+      if (window._kwSelected === word) btn.classList.add('kw-selected');
+      cloud.appendChild(btn);
+    }
+  };
+
+  // Refresh clears only visual selection + rebuilds
+  const rc = document.getElementById('refreshCloud');
+  if (rc) {
+    rc.addEventListener('click', ()=>{
+      window._kwSelected = "";
+      if (typeof window.rebuildKeywordCloud === 'function') {
+        setTimeout(window.rebuildKeywordCloud, 0);
+      }
+    });
+  }
+})();
+</script>
+
+
+<script>
+// ===== Phase 2 Visual Depth Pack JS =====
+(function(){
+  // 3) Category color mapping -> applies to accent stripe
+  const categoryColors = {
+    news: '#6B7280', general:'#6B7280',
+    business: '#1E40AF',
+    tech: '#0EA5E9', technology:'#0EA5E9',
+    entertainment: '#BE185D',
+    sports: '#16A34A',
+    politics: '#DC2626',
+    health: '#7C3AED',
+    science: '#22C55E',
+    food: '#DB2777',
+    travel: '#EA580C',
+    default: '#374151'
+  };
+
+  function applyStripeColors(root){
+    (root || document).querySelectorAll('article.group').forEach(card => {
+      // find the category text from the pill inside the image area (first top-left badge)
+      const catPill = card.querySelector('a > div.absolute span');
+      let cat = (catPill && catPill.textContent || 'news').trim().toLowerCase();
+      const color = categoryColors[cat] || categoryColors.default;
+      card.style.setProperty('--cat-color', color);
+      // Mark pill for click (visual chip only)
+      if (catPill) catPill.classList.add('cat-pill');
+    });
+  }
+
+  // Initial run & after content loads
+  document.addEventListener('DOMContentLoaded', ()=> applyStripeColors(document));
+
+  // Observe grids for dynamically added cards
+  const grids = ['headlinesGrid','topGrid','allGrid','savedGrid']
+    .map(id => document.getElementById(id)).filter(Boolean);
+  const mo = new MutationObserver(muts => {
+    muts.forEach(m => {
+      m.addedNodes && m.addedNodes.forEach(n => {
+        if (n.nodeType === 1){
+          if (n.matches && n.matches('article.group')) applyStripeColors(n);
+          n.querySelectorAll && n.querySelectorAll('article.group').forEach(applyStripeColors);
+        }
+      });
+    });
+  });
+  grids.forEach(g => mo.observe(g, {childList:true, subtree:true}));
+
+  // 5) Smart visual chips (no filtering)
+  const dock = document.getElementById('chipsDock');
+  function addChip(label, kind){
+    if (!dock || !label) return;
+    // avoid duplicates
+    const exists = Array.from(dock.querySelectorAll('.chip')).some(c => c.dataset.label === label && c.dataset.kind === kind);
+    if (exists) return;
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.dataset.label = label;
+    chip.dataset.kind = kind; // 'keyword' | 'category'
+    chip.innerHTML = `<strong>${kind === 'keyword' ? '#' : ''}${label}</strong> <button aria-label="Remove">×</button>`;
+    chip.querySelector('button').addEventListener('click', ()=> chip.remove());
+    dock.appendChild(chip);
+  }
+
+  // Hook keyword selection (visual only) -> add chip
+  const cloud = document.getElementById('keywordCloud');
+  if (cloud){
+    cloud.addEventListener('click', (e)=>{
+      const b = e.target.closest('.kw-bubble, button');
+      if (!b) return;
+      const word = (b.textContent || '').trim();
+      if (word) addChip(word, 'keyword');
+    });
+  }
+
+  // Hook category pill clicks -> add chip
+  document.addEventListener('click', (e)=>{
+    const pill = e.target.closest('.cat-pill');
+    if (!pill) return;
+    const cat = (pill.textContent || '').trim();
+    if (cat) addChip(cat, 'category');
+  }, true);
+
+})();
+</script>
+
+
+<script>
+(function(){
+  const elOn = document.getElementById('publishedOn');
+  const elAfter = document.getElementById('publishedAfter');
+  const elBefore = document.getElementById('publishedBefore');
+  const blockPeriod = (function(){
+    // find the "Published Period" container (now hidden)
+    const spans = Array.from(document.querySelectorAll('span')).filter(s => s.textContent.trim() === 'Published Period');
+    return spans.length ? spans[0].closest('div') : null;
+  })();
+
+  const hybrid = document.getElementById('publishedHybrid');
+  if (!hybrid) return;
+  const rangeInput = document.getElementById('publishedRange');
+  const chips = hybrid.querySelectorAll('button[data-chip]');
+
+  function fmt(d){
+    if (!(d instanceof Date)) return '';
+    const m = (d.getMonth()+1).toString().padStart(2,'0');
+    const day = d.getDate().toString().padStart(2,'0');
+    return `${d.getFullYear()}-${m}-${day}`;
+  }
+  function today(){ return new Date(new Date().toDateString()); }
+  function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+
+  function setActiveChip(key){
+    chips.forEach(c => c.classList.toggle('active', c.dataset.chip === key));
+  }
+  function clearAll(){
+    if (elOn) elOn.value = '';
+    if (elAfter) elAfter.value = '';
+    if (elBefore) elBefore.value = '';
+  }
+
+  const handlers = {
+    today(){
+      const t = today();
+      clearAll();
+      if (elOn) elOn.value = fmt(t);
+      rangeInput && (rangeInput.value = `${fmt(t)} — ${fmt(t)}`);
+      if (blockPeriod) blockPeriod.classList.add('hidden');
+      setActiveChip('today');
+    },
+    week(){
+      const t = today(), start = addDays(t, -6);
+      clearAll();
+      if (elAfter) elAfter.value = fmt(start);
+      if (elBefore) elBefore.value = fmt(t);
+      rangeInput && (rangeInput.value = `${fmt(start)} — ${fmt(t)}`);
+      if (blockPeriod) blockPeriod.classList.add('hidden');
+      setActiveChip('week');
+    },
+    month(){
+      const t = today(), start = addDays(t, -29);
+      clearAll();
+      if (elAfter) elAfter.value = fmt(start);
+      if (elBefore) elBefore.value = fmt(t);
+      rangeInput && (rangeInput.value = `${fmt(start)} — ${fmt(t)}`);
+      if (blockPeriod) blockPeriod.classList.add('hidden');
+      setActiveChip('month');
+    },
+    custom(){
+      // Reveal original period inputs for precise selection
+      if (blockPeriod) blockPeriod.classList.remove('hidden');
+      setActiveChip('custom');
+      if (elAfter) elAfter.focus();
+    }
+  };
+
+  chips.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.chip;
+      if (handlers[key]) handlers[key]();
+    });
+  });
+
+  // Initialize (optional): set "This Week" as default
+  // handlers.week();
+})();
+</script>
+
+
+<script>
+(function(){
+  const rc = document.getElementById('refreshCloud');
+  function clearVisualSelections(){
+    // 1) Clear keyword visual selection
+    window._kwSelected = "";
+    // 2) Rebuild cloud if available
+    if (typeof window.rebuildKeywordCloud === 'function') {
+      try { window.rebuildKeywordCloud(); } catch(e){ /* noop */ }
+    }
+    // 3) Clear chips dock (visual-only chips)
+    const dock = document.getElementById('chipsDock');
+    if (dock) {
+      while (dock.firstChild) dock.removeChild(dock.firstChild);
+    }
+    // 4) Do NOT alter saved items or real filters
+    if (typeof setStatus === 'function') setStatus('Keyword selection cleared.');
+  }
+  if (rc){
+    // Remove existing listeners by cloning (safe reset), then attach our clean handler
+    const clone = rc.cloneNode(true);
+    rc.parentNode.replaceChild(clone, rc);
+    clone.addEventListener('click', clearVisualSelections);
+  }
+})();
+</script>
+
+
+<script>
+(function(){
+  // Toast API
+  function showToast(message, type='info', timeout=2400){
+    const stack = document.getElementById('toastStack');
+    if (!stack) return;
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    const icon = type === 'success' ? '✔️' :
+                 type === 'warn'    ? '⚠️' :
+                 type === 'error'   ? '⛔' : '🔔';
+    t.innerHTML = `<span class="toast-icon">${icon}</span><span>${message}</span>`;
+    stack.appendChild(t);
+    // animate in
+    requestAnimationFrame(()=> t.classList.add('show'));
+    // auto dismiss
+    const kill = () => { t.classList.remove('show'); setTimeout(()=> t.remove(), 260); };
+    setTimeout(kill, timeout);
+    // click to dismiss
+    t.addEventListener('click', kill, {once:true});
+  }
+  window.showToast = showToast;
+
+  // Hook keyword selection (visual only)
+  const cloud = document.getElementById('keywordCloud');
+  if (cloud){
+    cloud.addEventListener('click', (e)=>{
+      const b = e.target.closest('.kw-bubble, button');
+      if (!b) return;
+      const word = (b.textContent || '').trim();
+      if (word){
+        showToast(`Selected keyword: “${word}” (visual only)`, 'info');
+      }
+    });
+  }
+
+  // Enhance Refresh: already clears visuals; now show toast
+  const rc = document.getElementById('refreshCloud');
+  if (rc){
+    // We already replaced the node to reset handlers previously; add an extra toast listener
+    rc.addEventListener('click', ()=>{
+      showToast('Keyword selections cleared', 'success');
+    });
+  }
+})();
+</script>
+
+
+<script>
+(function(){
+  const SAVED_GRID_ID = 'savedGrid';
+  const grid = document.getElementById(SAVED_GRID_ID);
+  if (!grid) return;
+
+  function getKey(uuid){ return `read:${uuid}`; }
+  function getProgressKey(uuid){ return `progress:${uuid}`; }
+
+  function isRead(uuid){ try { return localStorage.getItem(getKey(uuid)) === '1'; } catch(e){ return false; } }
+  function setRead(uuid, val){ try { localStorage.setItem(getKey(uuid), val ? '1':'0'); } catch(e){} }
+  function getProgress(uuid){ try { return parseInt(localStorage.getItem(getProgressKey(uuid)) || '0', 10); } catch(e){ return 0; } }
+  function setProgress(uuid, n){ try { localStorage.setItem(getProgressKey(uuid), String(Math.max(0, Math.min(100, n)))); } catch(e){} }
+
+  function buildControls(card){
+    if (!card || card.querySelector('.saved-meta')) return; // already installed
+    const uuid = card.getAttribute('data-uuid');
+    if (!uuid) return;
+    const inner = card.querySelector('div.p-4');
+    if (!inner) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'saved-meta';
+
+    const left = document.createElement('div');
+    left.className = 'read-state';
+    const pct = isRead(uuid) ? 100 : getProgress(uuid);
+    left.textContent = isRead(uuid) ? 'Read' : (pct > 0 ? `Progress: ${pct}%` : 'Not started');
+
+    const right = document.createElement('div');
+    right.className = 'saved-actions';
+    const btn = document.createElement('button');
+    btn.className = 'btn-read';
+    btn.textContent = isRead(uuid) ? 'Mark as unread' : 'Mark as read';
+    btn.addEventListener('click', ()=>{
+      const nowRead = !isRead(uuid);
+      setRead(uuid, nowRead);
+      setProgress(uuid, nowRead ? 100 : 0);
+      // Update visuals
+      prog.style.width = (nowRead ? 100 : 0) + '%';
+      left.textContent = nowRead ? 'Read' : 'Not started';
+      btn.textContent = nowRead ? 'Mark as unread' : 'Mark as read';
+      if (window.showToast) window.showToast(nowRead ? 'Marked as read' : 'Marked as unread', nowRead ? 'success' : 'info');
+    });
+    right.appendChild(btn);
+
+    const bar = document.createElement('div');
+    bar.className = 'saved-progress';
+    const prog = document.createElement('span');
+    prog.style.width = (pct || 0) + '%';
+    bar.appendChild(prog);
+
+    // Append controls
+    inner.appendChild(bar);
+    inner.appendChild(wrap);
+    wrap.appendChild(left);
+    wrap.appendChild(right);
+  }
+
+  // Initialize existing saved cards
+  function installAll(root){
+    (root || document).querySelectorAll('#'+SAVED_GRID_ID+' article.group').forEach(buildControls);
+  }
+  installAll(document);
+
+  // Watch for future saved cards being added
+  const mo = new MutationObserver(muts => {
+    muts.forEach(m => {
+      m.addedNodes && m.addedNodes.forEach(n => {
+        if (n.nodeType === 1){
+          if (n.matches && n.matches('article.group')) buildControls(n);
+          n.querySelectorAll && n.querySelectorAll('article.group').forEach(buildControls);
+        }
+      });
+    });
+  });
+  mo.observe(grid, {childList:true, subtree:true});
+})();
+</script>
+
+
+<script>
+// Remove keyword toast behavior only, keep all other toasts (e.g., Refresh)
+(function(){
+  function stripKeywordToast(){
+    const cloud = document.getElementById('keywordCloud');
+    if (!cloud) return;
+    // Replace the container node to drop any container-level listeners (like the toast)
+    const clone = cloud.cloneNode(true); // keeps children, drops listeners
+    cloud.parentNode.replaceChild(clone, cloud);
+    // Rebuild keyword cloud to restore per-button selection handlers (visual only)
+    if (typeof window.rebuildKeywordCloud === 'function'){
+      try { window.rebuildKeywordCloud(); } catch(e){ /* noop */ }
+    }
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', stripKeywordToast);
+  } else {
+    stripKeywordToast();
+  }
+})();
+</script>
+
+
+<script>
+// ===== Calm+ JS glue =====
+(function(){
+  // 1) Responsive images: ensure lazy loading & async decoding
+  function enhanceImages(root){
+    (root || document).querySelectorAll('img').forEach(img => {
+      img.setAttribute('loading','lazy');
+      img.setAttribute('decoding','async');
+    });
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', () => enhanceImages(document));
+  } else {
+    enhanceImages(document);
+  }
+
+  // 2) Hover prefetch for article links
+  const prefetched = new Set();
+  document.addEventListener('mouseover', (e)=>{
+    const a = e.target.closest('a[href^="http"]');
+    if (!a) return;
+    const href = a.getAttribute('href');
+    if (!href || prefetched.has(href)) return;
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.href = href;
+    document.head.appendChild(link);
+    prefetched.add(href);
+  }, {passive:true});
+
+  // 3) Card tooltips: show "source • time" as a tiny glass tooltip
+  function installTooltips(root){
+    (root || document).querySelectorAll('article.group').forEach(card => {
+      if (card.querySelector('.card-tip')) return;
+      const meta = card.querySelector('.text-xs.text-zinc-500');
+      if (!meta) return;
+      const bits = Array.from(meta.querySelectorAll('span')).map(s => s.textContent.trim()).filter(Boolean);
+      if (!bits.length) return;
+      const tip = document.createElement('div');
+      tip.className = 'card-tip';
+      tip.textContent = bits.join(' • ');
+      const anchor = card.querySelector('a.block.relative') || card;
+      anchor.style.position = 'relative';
+      anchor.appendChild(tip);
+    });
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', () => installTooltips(document));
+  } else {
+    installTooltips(document);
+  }
+
+  // Observe dynamic grids for new cards to re-apply enhancements
+  const grids = ['headlinesGrid','topGrid','allGrid','savedGrid']
+    .map(id => document.getElementById(id)).filter(Boolean);
+  const mo = new MutationObserver(muts => {
+    muts.forEach(m => {
+      m.addedNodes && m.addedNodes.forEach(n => {
+        if (n.nodeType === 1){
+          // images
+          n.querySelectorAll && enhanceImages(n);
+          // tooltips
+          installTooltips(n);
+        }
+      });
+    });
+  });
+  grids.forEach(g => mo.observe(g, {childList:true, subtree:true}));
+})();
+</script>
+
+</body>
+</html>
